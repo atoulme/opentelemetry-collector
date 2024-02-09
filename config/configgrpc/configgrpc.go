@@ -5,7 +5,6 @@ package configgrpc // import "go.opentelemetry.io/collector/config/configgrpc"
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -16,6 +15,7 @@ import (
 	"github.com/mostynb/go-grpc-compression/nonclobbering/zstd"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/credentials"
@@ -192,6 +192,29 @@ func (gcs *ClientConfig) ToClientConn(ctx context.Context, host component.Host, 
 	return grpc.DialContext(ctx, gcs.SanitizedEndpoint(), opts...)
 }
 
+func (gcs *ClientConfig) toTransportCredentials(settings component.TelemetrySettings) (credentials.TransportCredentials, error) {
+	tlsSetting := &gcs.TLSSetting
+	if gcs.TLSSetting.Insecure {
+		// Per https://github.com/alanwest/opentelemetry-specification/blob/main/specification/protocol/exporter.md
+		// If the endpoint uses the https scheme, then the TLS insecure setting must be overridden.
+		if strings.HasPrefix(gcs.Endpoint, "https://") {
+			settings.Logger.Warn("This https endpoint overrides the TLS `insecure` setting. Set the `insecure` option to false or drop the `https` scheme to remove this warning.", zap.String("endpoint", gcs.Endpoint))
+			tlsSetting = &configtls.TLSClientSetting{}
+			*tlsSetting = gcs.TLSSetting
+			tlsSetting.Insecure = false
+		}
+	}
+	tlsCfg, err := tlsSetting.LoadTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	cred := insecure.NewCredentials()
+	if tlsCfg != nil {
+		cred = credentials.NewTLS(tlsCfg)
+	}
+	return cred, err
+}
+
 func (gcs *ClientConfig) toDialOptions(host component.Host, settings component.TelemetrySettings) ([]grpc.DialOption, error) {
 	var opts []grpc.DialOption
 	if gcs.Compression.IsCompressed() {
@@ -201,17 +224,11 @@ func (gcs *ClientConfig) toDialOptions(host component.Host, settings component.T
 		}
 		opts = append(opts, grpc.WithDefaultCallOptions(grpc.UseCompressor(cp)))
 	}
-
-	tlsCfg, err := gcs.TLSSetting.LoadTLSConfig()
+	cred, err := gcs.toTransportCredentials(settings)
 	if err != nil {
 		return nil, err
 	}
-	cred := insecure.NewCredentials()
-	if tlsCfg != nil {
-		cred = credentials.NewTLS(tlsCfg)
-	} else if gcs.isSchemeHTTPS() {
-		cred = credentials.NewTLS(&tls.Config{})
-	}
+
 	opts = append(opts, grpc.WithTransportCredentials(cred))
 
 	if gcs.ReadBufferSize > 0 {
