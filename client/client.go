@@ -114,6 +114,7 @@ type AuthData interface {
 	GetAttributeNames() []string
 }
 
+// MetadataHostName is a constant representing the Host header name.
 const MetadataHostName = "Host"
 
 // NewContext takes an existing context and derives a new context with the
