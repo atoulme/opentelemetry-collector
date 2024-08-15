@@ -245,6 +245,7 @@ func TestInlineReplace(t *testing.T) {
 		stability      map[component.StabilityLevel][]string
 		distros        []string
 		codeowners     *Codeowners
+		githubProject  string
 	}{
 		{
 			name: "readme with empty status",
@@ -258,6 +259,7 @@ Some info about a component
 			outputFile:     "readme_with_status.md",
 			componentClass: "receiver",
 			distros:        []string{"contrib"},
+			githubProject:  "open-telemetry/opentelemetry-collector",
 		},
 		{
 			name: "readme with status for extension",
@@ -336,6 +338,7 @@ Some info about a component
 			outputFile:     "readme_with_status.md",
 			componentClass: "receiver",
 			distros:        []string{"contrib"},
+			githubProject:  "open-telemetry/opentelemetry-collector",
 		},
 		{
 			name: "readme with no status",
@@ -402,6 +405,7 @@ Some info about a component
 				stability = tt.stability
 			}
 			md := metadata{
+				GithubProject:   tt.githubProject,
 				Type:            "foo",
 				ShortFolderName: "foo",
 				Status: &Status{
