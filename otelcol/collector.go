@@ -135,7 +135,7 @@ func NewCollector(set CollectorSettings) (*Collector, error) {
 		shutdownChan: make(chan struct{}),
 		// Per signal.Notify documentation, a size of the channel equaled with
 		// the number of signals getting notified on is recommended.
-		signalsChannel:             make(chan os.Signal, 3),
+		signalsChannel:             make(chan os.Signal, 4),
 		asyncErrorChannel:          make(chan error),
 		configProvider:             configProvider,
 		bc:                         bc,
