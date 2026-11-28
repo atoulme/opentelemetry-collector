@@ -61,6 +61,7 @@ func NewLogsRequest(
 func newConsumeLogs(converter request.RequestConverterFunc[plog.Logs], be *BaseExporter, logger *zap.Logger) consumer.ConsumeLogsFunc {
 	return func(ctx context.Context, ld plog.Logs) error {
 		req, err := converter(ctx, ld)
+		defer req.Dispose()
 		if err != nil {
 			logger.Error("Failed to convert logs. Dropping data.",
 				zap.Int("dropped_log_records", ld.LogRecordCount()),

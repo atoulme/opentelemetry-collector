@@ -6,6 +6,7 @@ package queuebatch // import "go.opentelemetry.io/collector/exporter/exporterhel
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumererror"
@@ -42,11 +43,22 @@ type logsRequest struct {
 	sizes sizer.SizeCache
 }
 
-func newLogsRequest(ld plog.Logs) request.Request {
+var logsPool = sync.Pool{New: func() any {
 	return &logsRequest{
-		ld:    ld,
 		sizes: sizer.NewSizeCache(),
 	}
+}}
+
+func newLogsRequest(ld plog.Logs) request.Request {
+	l := logsPool.Get().(*logsRequest)
+	l.ld = ld
+	// reset the size cache
+	l.sizes.Update(sizer.SizerTypeItems, -1)
+	return l
+}
+
+func (l *logsRequest) Dispose() {
+	logsPool.Put(l)
 }
 
 type logsEncoding struct{}

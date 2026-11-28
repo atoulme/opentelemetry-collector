@@ -92,6 +92,8 @@ func (r *FakeRequest) MergeSplit(_ context.Context, maxSize int, sz sizer.Sizer,
 	return res, nil
 }
 
+func (r *FakeRequest) Dispose() {}
+
 func (r *FakeRequest) mergeTo(dst *FakeRequest) {
 	dst.Items += r.Items
 	dst.Bytes += r.Bytes

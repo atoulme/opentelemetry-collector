@@ -38,11 +38,12 @@ func (c *SizeCache) SizeOf(szt SizerType, compute func() int) int {
 // Update records the size for a SizerType after the request data changed, and drops
 // values of other types, which the caller did not maintain.
 func (c *SizeCache) Update(szt SizerType, size int) {
-	c.itemsSize, c.bytesSize = uncachedSize, uncachedSize
 	switch szt {
 	case SizerTypeItems:
 		c.itemsSize = size
+		c.bytesSize = uncachedSize
 	case SizerTypeBytes:
+		c.itemsSize = uncachedSize
 		c.bytesSize = size
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 
-	"go.opentelemetry.io/collector/exporter/exporterhelper"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 	"go.opentelemetry.io/collector/pdata/pprofile"
 )
@@ -17,23 +16,13 @@ import (
 //
 // Following the OTLP 1.7.0 upgrade, this is currently a noop.
 // See https://github.com/open-telemetry/opentelemetry-collector/issues/13106
-func (req *profilesRequest) MergeSplit(_ context.Context, maxSize int, szt exporterhelper.RequestSizerType, r2 Request) ([]Request, error) {
-	var sz sizer.ProfilesSizer
-	switch szt {
-	case exporterhelper.RequestSizerTypeItems:
-		sz = &sizer.ProfilesCountSizer{}
-	case exporterhelper.RequestSizerTypeBytes:
-		sz = &sizer.ProfilesBytesSizer{}
-	default:
-		return nil, errors.New("unknown sizer type")
-	}
-
+func (req *profilesRequest) MergeSplit(_ context.Context, maxSize int, sz sizer.Sizer, r2 Request) ([]Request, error) {
 	if r2 != nil && r2.ItemsCount() > 0 {
 		req2, ok := r2.(*profilesRequest)
 		if !ok {
 			return nil, errors.New("invalid input type")
 		}
-		err := req2.mergeTo(req, sz)
+		err := req2.mergeTo(req, sz.ProfilesSizer)
 		if err != nil {
 			return nil, fmt.Errorf("failed merging profiles; %w", err)
 		}
@@ -43,7 +32,7 @@ func (req *profilesRequest) MergeSplit(_ context.Context, maxSize int, szt expor
 	if maxSize == 0 {
 		return []Request{req}, nil
 	}
-	return req.split(maxSize, sz)
+	return req.split(maxSize, sz.ProfilesSizer)
 }
 
 func (req *profilesRequest) mergeTo(dst *profilesRequest, sz sizer.ProfilesSizer) error {

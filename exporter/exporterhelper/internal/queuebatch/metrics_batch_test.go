@@ -268,11 +268,12 @@ func BenchmarkSplittingBasedOnItemCountManySmallMetrics(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
 	// All requests merge into a single batch.
 	b.ReportAllocs()
+	s := newSizer(sizer.SizerTypeItems).Sizer()
 	for b.Loop() {
 		merged := []request.Request{newMetricsRequest(testdata.GenerateMetrics(10))}
 		for range 1000 {
 			lr2 := newMetricsRequest(testdata.GenerateMetrics(10))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20020, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20020, s, lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 1)
@@ -283,11 +284,12 @@ func BenchmarkSplittingBasedOnItemCountManyMetricsSlightlyAboveLimit(b *testing.
 	testutil.SkipGCHeavyBench(b)
 	// Every incoming request results in a split.
 	b.ReportAllocs()
+	sizer := newSizer(sizer.SizerTypeItems).Sizer()
 	for b.Loop() {
 		merged := []request.Request{newMetricsRequest(testdata.GenerateMetrics(0))}
 		for range 10 {
 			lr2 := newMetricsRequest(testdata.GenerateMetrics(10001))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, sizer, lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 11)
@@ -298,10 +300,11 @@ func BenchmarkSplittingBasedOnItemCountHugeMetrics(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
 	// One request splits into many batches.
 	b.ReportAllocs()
+	sizer := newSizer(sizer.SizerTypeItems).Sizer()
 	for b.Loop() {
 		merged := []request.Request{newMetricsRequest(testdata.GenerateMetrics(0))}
 		lr2 := newMetricsRequest(testdata.GenerateMetrics(100000))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, sizer, lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 		assert.Len(b, merged, 10)
 	}

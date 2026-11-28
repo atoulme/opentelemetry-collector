@@ -335,13 +335,14 @@ func TestTracesMergeSplitExactItems(t *testing.T) {
 
 func BenchmarkSplittingBasedOnItemCountManySmallTraces(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeItems).Sizer()
 	// All requests merge into a single batch.
 	b.ReportAllocs()
 	for b.Loop() {
 		merged := []request.Request{newTracesRequest(testdata.GenerateTraces(10))}
 		for range 1000 {
 			lr2 := newTracesRequest(testdata.GenerateTraces(10))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10010, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10010, s, lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 1)
@@ -350,13 +351,14 @@ func BenchmarkSplittingBasedOnItemCountManySmallTraces(b *testing.B) {
 
 func BenchmarkSplittingBasedOnItemCountManyTracesSlightlyAboveLimit(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeItems).Sizer()
 	// Every incoming request results in a split.
 	b.ReportAllocs()
 	for b.Loop() {
 		merged := []request.Request{newTracesRequest(testdata.GenerateTraces(0))}
 		for range 10 {
 			lr2 := newTracesRequest(testdata.GenerateTraces(10001))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, s, lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 11)
@@ -365,12 +367,13 @@ func BenchmarkSplittingBasedOnItemCountManyTracesSlightlyAboveLimit(b *testing.B
 
 func BenchmarkSplittingBasedOnItemCountHugeTraces(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeItems).Sizer()
 	// One request splits into many batches.
 	b.ReportAllocs()
 	for b.Loop() {
 		merged := []request.Request{newTracesRequest(testdata.GenerateTraces(0))}
 		lr2 := newTracesRequest(testdata.GenerateTraces(100000))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, s, lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 		assert.Len(b, merged, 10)
 	}

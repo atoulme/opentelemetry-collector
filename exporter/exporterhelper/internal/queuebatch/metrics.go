@@ -6,6 +6,7 @@ package queuebatch // import "go.opentelemetry.io/collector/exporter/exporterhel
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumererror"
@@ -40,10 +41,21 @@ type metricsRequest struct {
 }
 
 func newMetricsRequest(md pmetric.Metrics) request.Request {
+	m := metricsPool.Get().(*metricsRequest)
+	m.md = md
+	// reset the size cache
+	m.sizes.Update(sizer.SizerTypeItems, -1)
+	return m
+}
+
+var metricsPool = sync.Pool{New: func() any {
 	return &metricsRequest{
-		md:    md,
 		sizes: sizer.NewSizeCache(),
 	}
+}}
+
+func (l *metricsRequest) Dispose() {
+	metricsPool.Put(l)
 }
 
 type metricsEncoding struct{}

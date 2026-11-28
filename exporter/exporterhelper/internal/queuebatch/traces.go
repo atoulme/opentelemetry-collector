@@ -6,6 +6,7 @@ package queuebatch // import "go.opentelemetry.io/collector/exporter/exporterhel
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumererror"
@@ -42,11 +43,22 @@ type tracesRequest struct {
 	sizes sizer.SizeCache
 }
 
-func newTracesRequest(td ptrace.Traces) request.Request {
+var tracesPool = sync.Pool{New: func() any {
 	return &tracesRequest{
-		td:    td,
 		sizes: sizer.NewSizeCache(),
 	}
+}}
+
+func newTracesRequest(ld ptrace.Traces) request.Request {
+	t := tracesPool.Get().(*tracesRequest)
+	t.td = ld
+	// reset the size cache
+	t.sizes.Update(sizer.SizerTypeItems, -1)
+	return t
+}
+
+func (l *tracesRequest) Dispose() {
+	tracesPool.Put(l)
 }
 
 type tracesEncoding struct{}

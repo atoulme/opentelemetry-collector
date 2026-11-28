@@ -322,13 +322,14 @@ func TestLogsMergeSplitExactItems(t *testing.T) {
 
 func BenchmarkSplittingBasedOnItemCountManySmallLogs(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeItems).Sizer()
 	// All requests merge into a single batch.
 	b.ReportAllocs()
 	for b.Loop() {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(10))}
 		for range 1000 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10010, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10010, s, lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 1)
@@ -337,13 +338,14 @@ func BenchmarkSplittingBasedOnItemCountManySmallLogs(b *testing.B) {
 
 func BenchmarkSplittingBasedOnByteSizeManySmallLogs(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeBytes).Sizer()
 	// All requests merge into a single batch.
 	b.ReportAllocs()
 	for b.Loop() {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(10))}
 		for range 1000 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(11000)), newSizer(sizer.SizerTypeBytes).Sizer(), lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(11000)), s, lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 1)
@@ -357,13 +359,14 @@ func BenchmarkSplittingBasedOnByteSizeManySmallLogs(b *testing.B) {
 // accumulation O(n^2) overall.
 func BenchmarkByteSizeFlushCheckManySmallLogs(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeBytes).Sizer()
 	b.ReportAllocs()
 	for b.Loop() {
 		batch := newLogsRequest(testdata.GenerateLogs(10))
 		var total int
 		for range 1000 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10))
-			res, _ := batch.MergeSplit(context.Background(), 0, newSizer(sizer.SizerTypeBytes).Sizer(), lr2)
+			res, _ := batch.MergeSplit(context.Background(), 0, s, lr2)
 			batch = res[len(res)-1]
 			// The batcher's MinSize check on the accumulated batch.
 			total += batch.BytesSize()
@@ -374,13 +377,14 @@ func BenchmarkByteSizeFlushCheckManySmallLogs(b *testing.B) {
 
 func BenchmarkSplittingBasedOnItemCountManyLogsSlightlyAboveLimit(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeItems).Sizer()
 	// Every incoming request results in a split.
 	b.ReportAllocs()
 	for b.Loop() {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(0))}
 		for range 10 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10001))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, s, lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 11)
@@ -389,13 +393,14 @@ func BenchmarkSplittingBasedOnItemCountManyLogsSlightlyAboveLimit(b *testing.B) 
 
 func BenchmarkSplittingBasedOnByteSizeManyLogsSlightlyAboveLimit(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeBytes).Sizer()
 	// Every incoming request results in a split.
 	b.ReportAllocs()
 	for b.Loop() {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(0))}
 		for range 10 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10001))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(10000)), newSizer(sizer.SizerTypeBytes).Sizer(), lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(10000)), s, lr2)
 			assert.Len(b, res, 2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
@@ -405,12 +410,13 @@ func BenchmarkSplittingBasedOnByteSizeManyLogsSlightlyAboveLimit(b *testing.B) {
 
 func BenchmarkSplittingBasedOnItemCountHugeLogs(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeItems).Sizer()
 	// One request splits into many batches.
 	b.ReportAllocs()
 	for b.Loop() {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(0))}
 		lr2 := newLogsRequest(testdata.GenerateLogs(100000))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, s, lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 		assert.Len(b, merged, 10)
 	}
@@ -418,12 +424,13 @@ func BenchmarkSplittingBasedOnItemCountHugeLogs(b *testing.B) {
 
 func BenchmarkSplittingBasedOnByteSizeHugeLogs(b *testing.B) {
 	testutil.SkipGCHeavyBench(b)
+	s := newSizer(sizer.SizerTypeBytes).Sizer()
 	// One request splits into many batches.
 	b.ReportAllocs()
 	for b.Loop() {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(0))}
 		lr2 := newLogsRequest(testdata.GenerateLogs(100000))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(10010)), newSizer(sizer.SizerTypeBytes).Sizer(), lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(10010)), s, lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 		assert.Len(b, merged, 10)
 	}

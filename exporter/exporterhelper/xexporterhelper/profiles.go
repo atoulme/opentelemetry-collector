@@ -6,6 +6,7 @@ package xexporterhelper // import "go.opentelemetry.io/collector/exporter/export
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"go.uber.org/zap"
 
@@ -51,11 +52,21 @@ type profilesRequest struct {
 	cachedSize int
 }
 
-func newProfilesRequest(pd pprofile.Profiles) Request {
+var profilesPool = sync.Pool{New: func() any {
 	return &profilesRequest{
-		pd:         pd,
 		cachedSize: -1,
 	}
+}}
+
+func newProfilesRequest(pd pprofile.Profiles) request.Request {
+	p := profilesPool.Get().(*profilesRequest)
+	p.pd = pd
+	p.cachedSize = -1
+	return p
+}
+
+func (req *profilesRequest) Dispose() {
+	profilesPool.Put(req)
 }
 
 type profilesEncoding struct{}

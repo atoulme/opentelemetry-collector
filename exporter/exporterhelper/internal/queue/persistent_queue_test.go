@@ -47,6 +47,8 @@ func (i intRequest) BytesSize() int {
 	return int(i) * 10
 }
 
+func (i intRequest) Dispose() {}
+
 type int64Encoding struct{}
 
 func (int64Encoding) Marshal(_ context.Context, val intRequest) ([]byte, error) {

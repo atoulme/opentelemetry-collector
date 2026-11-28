@@ -30,6 +30,7 @@ type Request interface {
 	MergeSplit(ctx context.Context, maxSize int, sz sizer.Sizer, req Request) ([]Request, error)
 	// BytesSize returns the size of the request in bytes according to the protobuf encoding.
 	BytesSize() int
+	Dispose()
 }
 
 // ErrorHandler is an optional interface that can be implemented by Request to provide a way handle partial
