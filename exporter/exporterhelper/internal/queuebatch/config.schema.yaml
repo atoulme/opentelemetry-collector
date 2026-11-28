@@ -22,7 +22,7 @@ $defs:
       sizer:
         description: Sizer determines the type of size measurement used by the batch. If not configured, use the same configuration as the queue. It accepts "requests", "items", or "bytes".
         type: string
-        x-customType: go.opentelemetry.io/collector/exporter/exporterhelper/internal/request.SizerType
+        x-customType: go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer.SizerType
   partition_config:
     description: PartitionConfig defines a configuration for partitioning requests based on metadata keys.
     type: object
@@ -64,7 +64,7 @@ $defs:
       sizer:
         description: Sizer determines the type of size measurement used by this component. It accepts "requests", "items", or "bytes".
         type: string
-        x-customType: go.opentelemetry.io/collector/exporter/exporterhelper/internal/request.SizerType
+        x-customType: go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer.SizerType
       storage:
         description: 'StorageID if not empty, enables the persistent storage and uses the component specified as a storage extension for the persistent queue.'
         x-optional: true

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -133,7 +134,7 @@ func TestRequestSizeCacheCrossDimension(t *testing.T) {
 			_ = batch.ItemsCount()
 			_ = batch.BytesSize()
 
-			res, err := batch.MergeSplit(context.Background(), 0, request.SizerTypeItems, sig.newReq(7))
+			res, err := batch.MergeSplit(context.Background(), 0, sizer.SizerTypeItems, sig.newReq(7))
 			require.NoError(t, err)
 			merged := res[len(res)-1]
 
@@ -147,7 +148,7 @@ func TestRequestSizeCacheCrossDimension(t *testing.T) {
 			_ = batch.ItemsCount()
 			_ = batch.BytesSize()
 
-			res, err := batch.MergeSplit(context.Background(), 0, request.SizerTypeBytes, sig.newReq(7))
+			res, err := batch.MergeSplit(context.Background(), 0, sizer.SizerTypeBytes, sig.newReq(7))
 			require.NoError(t, err)
 			merged := res[len(res)-1]
 
@@ -169,13 +170,13 @@ func TestRequestCachedSizeMatchesRecompute(t *testing.T) {
 	for _, sig := range sizeCacheSignals() {
 		cases := []struct {
 			name    string
-			szt     request.SizerType
+			szt     sizer.SizerType
 			maxSize int
 		}{
-			{"items_no_split", request.SizerTypeItems, 0},
-			{"items_forced_splits", request.SizerTypeItems, 20},
-			{"bytes_no_split", request.SizerTypeBytes, 0},
-			{"bytes_forced_splits", request.SizerTypeBytes, sig.bytesOf(20)},
+			{"items_no_split", sizer.SizerTypeItems, 0},
+			{"items_forced_splits", sizer.SizerTypeItems, 20},
+			{"bytes_no_split", sizer.SizerTypeBytes, 0},
+			{"bytes_forced_splits", sizer.SizerTypeBytes, sig.bytesOf(20)},
 		}
 
 		for _, tc := range cases {
@@ -183,7 +184,7 @@ func TestRequestCachedSizeMatchesRecompute(t *testing.T) {
 				// A bytes-dimension split feeds the incremental accounting of the
 				// extract* helpers into the cache, and that is not exact for metrics.
 				inexact := !sig.exactByteSplitAccounting &&
-					tc.szt == request.SizerTypeBytes && tc.maxSize > 0
+					tc.szt == sizer.SizerTypeBytes && tc.maxSize > 0
 				sawDrift := false
 
 				batch := sig.newReq(3)

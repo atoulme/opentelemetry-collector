@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -47,7 +48,7 @@ func (r *FakeRequest) BytesSize() int {
 	return r.Bytes
 }
 
-func (r *FakeRequest) MergeSplit(_ context.Context, maxSize int, szt request.SizerType, r2 request.Request) ([]request.Request, error) {
+func (r *FakeRequest) MergeSplit(_ context.Context, maxSize int, szt sizer.SizerType, r2 request.Request) ([]request.Request, error) {
 	if r.MergeErr != nil {
 		return r.MergeErrResult, r.MergeErr
 	}
@@ -66,7 +67,7 @@ func (r *FakeRequest) MergeSplit(_ context.Context, maxSize int, szt request.Siz
 
 	var res []request.Request
 	switch szt {
-	case request.SizerTypeItems:
+	case sizer.SizerTypeItems:
 		for r.Items != 0 {
 			if r.Items <= maxSize {
 				res = append(res, r)
@@ -76,7 +77,7 @@ func (r *FakeRequest) MergeSplit(_ context.Context, maxSize int, szt request.Siz
 			r.Items -= maxSize
 			r.Bytes = -1
 		}
-	case request.SizerTypeBytes:
+	case sizer.SizerTypeBytes:
 		for r.Bytes != 0 {
 			if r.Bytes <= maxSize {
 				res = append(res, r)

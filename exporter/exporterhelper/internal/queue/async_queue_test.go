@@ -14,13 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/collector/component/componenttest"
-	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
 func TestAsyncMemoryQueue(t *testing.T) {
 	consumed := &atomic.Int64{}
 
-	set := newSettings(request.SizerTypeItems, 100)
+	set := newSettings(sizer.SizerTypeItems, 100)
 	ac := newAsyncQueue(newMemoryQueue[intRequest](set),
 		1, func(_ context.Context, _ intRequest, done Done) {
 			consumed.Add(1)
@@ -36,7 +36,7 @@ func TestAsyncMemoryQueue(t *testing.T) {
 
 func TestAsyncMemoryQueueBlocking(t *testing.T) {
 	consumed := &atomic.Int64{}
-	set := newSettings(request.SizerTypeItems, 100)
+	set := newSettings(sizer.SizerTypeItems, 100)
 	set.BlockOnOverflow = true
 	ac := newAsyncQueue(newMemoryQueue[intRequest](set),
 		4, func(_ context.Context, _ intRequest, done Done) {
@@ -59,7 +59,7 @@ func TestAsyncMemoryQueueBlocking(t *testing.T) {
 
 func TestAsyncMemoryWaitForResultQueueBlocking(t *testing.T) {
 	consumed := &atomic.Int64{}
-	set := newSettings(request.SizerTypeItems, 100)
+	set := newSettings(sizer.SizerTypeItems, 100)
 	set.BlockOnOverflow = true
 	set.WaitForResult = true
 	ac := newAsyncQueue(newMemoryQueue[intRequest](set),
@@ -83,7 +83,7 @@ func TestAsyncMemoryWaitForResultQueueBlocking(t *testing.T) {
 
 func TestAsyncMemoryQueueBlockingCancelled(t *testing.T) {
 	stop := make(chan struct{})
-	set := newSettings(request.SizerTypeItems, 10)
+	set := newSettings(sizer.SizerTypeItems, 10)
 	set.BlockOnOverflow = true
 	ac := newAsyncQueue(newMemoryQueue[intRequest](set),
 		1, func(_ context.Context, _ intRequest, done Done) {
@@ -113,7 +113,7 @@ func TestAsyncMemoryQueueBlockingCancelled(t *testing.T) {
 // The queue must keep its reference until the request is reported as done, not until the ConsumeFunc
 // returns. A batcher downstream keeps the Done of every request it merged until the batch is sent.
 func TestAsyncMemoryQueueReleasesReferenceOnDone(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 100)
+	set := newSettings(sizer.SizerTypeItems, 100)
 	rc := set.ReferenceCounter.(*fakeReferenceCounter)
 
 	dones := make(chan Done, 1)
@@ -135,7 +135,7 @@ func TestAsyncMemoryQueueReleasesReferenceOnDone(t *testing.T) {
 // With WaitForResult the caller stays blocked until the element is done, so the queue takes no
 // reference of its own, not even once the caller has given up and a consumer holds the element.
 func TestAsyncMemoryWaitForResultQueueTakesNoReference(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 100)
+	set := newSettings(sizer.SizerTypeItems, 100)
 	set.WaitForResult = true
 	rc := set.ReferenceCounter.(*fakeReferenceCounter)
 
@@ -162,7 +162,7 @@ func TestAsyncMemoryWaitForResultQueueTakesNoReference(t *testing.T) {
 
 // With WaitForResult a canceled Offer must behave like no queue at all: the element is not exported.
 func TestAsyncMemoryWaitForResultQueueCancelledNotConsumed(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 1000)
+	set := newSettings(sizer.SizerTypeItems, 1000)
 	set.WaitForResult = true
 	rc := set.ReferenceCounter.(*fakeReferenceCounter)
 
@@ -206,7 +206,7 @@ func TestAsyncMemoryWaitForResultQueueCancelledNotConsumed(t *testing.T) {
 func BenchmarkAsyncMemoryQueue(b *testing.B) {
 	b.Skip("Consistently fails with 'sending queue is full'")
 	consumed := &atomic.Int64{}
-	set := newSettings(request.SizerTypeItems, int64(10*b.N))
+	set := newSettings(sizer.SizerTypeItems, int64(10*b.N))
 	ac := newAsyncQueue(newMemoryQueue[intRequest](set), 1, func(_ context.Context, _ intRequest, done Done) {
 		consumed.Add(1)
 		done.OnDone(nil)

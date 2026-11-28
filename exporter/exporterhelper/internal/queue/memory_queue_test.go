@@ -15,11 +15,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/collector/component/componenttest"
-	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
 func TestMemoryQueue(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 7)
+	set := newSettings(sizer.SizerTypeItems, 7)
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
 	require.NoError(t, q.Offer(context.Background(), 1))
@@ -51,7 +51,7 @@ func TestMemoryQueue(t *testing.T) {
 }
 
 func TestMemoryQueueBlockingCancelled(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 5)
+	set := newSettings(sizer.SizerTypeItems, 5)
 	set.BlockOnOverflow = true
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
@@ -72,7 +72,7 @@ func TestMemoryQueueBlockingCancelled(t *testing.T) {
 }
 
 func TestMemoryQueueDrainWhenShutdown(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 7)
+	set := newSettings(sizer.SizerTypeItems, 7)
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
 	require.NoError(t, q.Offer(context.Background(), 1))
@@ -95,7 +95,7 @@ func TestMemoryQueueDrainWhenShutdown(t *testing.T) {
 }
 
 func TestMemoryQueueOfferInvalidSize(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 1)
+	set := newSettings(sizer.SizerTypeItems, 1)
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
 	require.ErrorIs(t, q.Offer(context.Background(), -1), errInvalidSize)
@@ -103,7 +103,7 @@ func TestMemoryQueueOfferInvalidSize(t *testing.T) {
 }
 
 func TestMemoryQueueRejectOverCapacityElements(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 1)
+	set := newSettings(sizer.SizerTypeItems, 1)
 	set.BlockOnOverflow = true
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
@@ -112,7 +112,7 @@ func TestMemoryQueueRejectOverCapacityElements(t *testing.T) {
 }
 
 func TestMemoryQueueOfferZeroSize(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 1)
+	set := newSettings(sizer.SizerTypeItems, 1)
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
 	require.NoError(t, q.Offer(context.Background(), 0))
@@ -122,7 +122,7 @@ func TestMemoryQueueOfferZeroSize(t *testing.T) {
 }
 
 func TestMemoryQueueOverflow(t *testing.T) {
-	set := newSettings(request.SizerTypeItems, 1)
+	set := newSettings(sizer.SizerTypeItems, 1)
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
 	require.NoError(t, q.Offer(context.Background(), 1))
@@ -133,7 +133,7 @@ func TestMemoryQueueOverflow(t *testing.T) {
 func TestMemoryQueueWaitForResultPassErrorBack(t *testing.T) {
 	wg := sync.WaitGroup{}
 	myErr := errors.New("test error")
-	set := newSettings(request.SizerTypeItems, 100)
+	set := newSettings(sizer.SizerTypeItems, 100)
 	set.WaitForResult = true
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
@@ -152,7 +152,7 @@ func TestMemoryQueueWaitForResultPassErrorBack(t *testing.T) {
 // and receives the actual outcome, because the element is going to be delivered either way.
 func TestMemoryQueueWaitForResultCancelIncomingRequest(t *testing.T) {
 	wg := sync.WaitGroup{}
-	set := newSettings(request.SizerTypeItems, 100)
+	set := newSettings(sizer.SizerTypeItems, 100)
 	set.WaitForResult = true
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
@@ -180,7 +180,7 @@ func TestMemoryQueueWaitForResultCancelIncomingRequest(t *testing.T) {
 func TestMemoryQueueWaitForResultCancelBeforeAccepted(t *testing.T) {
 	wg := sync.WaitGroup{}
 	release := make(chan struct{})
-	set := newSettings(request.SizerTypeItems, 1)
+	set := newSettings(sizer.SizerTypeItems, 1)
 	set.WaitForResult = true
 	set.BlockOnOverflow = true
 	q := newMemoryQueue[intRequest](set)
@@ -213,7 +213,7 @@ func TestMemoryQueueWaitForResultCancelBeforeAccepted(t *testing.T) {
 func TestMemoryQueueWaitForResultSizeAndCapacity(t *testing.T) {
 	wg := sync.WaitGroup{}
 	stop := make(chan struct{})
-	set := newSettings(request.SizerTypeItems, 100)
+	set := newSettings(sizer.SizerTypeItems, 100)
 	set.WaitForResult = true
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(t, q.Start(context.Background(), componenttest.NewNopHost()))
@@ -241,7 +241,7 @@ func TestMemoryQueueWaitForResultSizeAndCapacity(t *testing.T) {
 func BenchmarkMemoryQueueWaitForResult(b *testing.B) {
 	wg := sync.WaitGroup{}
 	consumed := &atomic.Int64{}
-	set := newSettings(request.SizerTypeItems, 100)
+	set := newSettings(sizer.SizerTypeItems, 100)
 	set.WaitForResult = true
 	q := newMemoryQueue[intRequest](set)
 	require.NoError(b, q.Start(context.Background(), componenttest.NewNopHost()))

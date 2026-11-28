@@ -28,7 +28,7 @@ type shardedBatcher struct {
 
 func newShardedBatcher(
 	cfg BatchConfig,
-	sizer request.Sizer,
+	sizer batchSizer,
 	mergeCtx func(context.Context, context.Context) context.Context,
 	wp *workerPool,
 	next sender.SendFunc[request.Request],

@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/requesttest"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
 type testContextKey string
@@ -28,32 +29,32 @@ const timestampKey testContextKey = "timestamp"
 func TestPartitionBatcher_NoSplit_MinThresholdZero_TimeoutDisabled(t *testing.T) {
 	tests := []struct {
 		name       string
-		sizerType  request.SizerType
-		sizer      request.Sizer
+		sizerType  sizer.SizerType
+		sizer      batchSizer
 		maxWorkers int
 	}{
 		{
 			name:       "items/one_worker",
-			sizerType:  request.SizerTypeItems,
-			sizer:      request.NewItemsSizer(),
+			sizerType:  sizer.SizerTypeItems,
+			sizer:      itemsSizer{},
 			maxWorkers: 1,
 		},
 		{
 			name:       "items/three_workers",
-			sizerType:  request.SizerTypeItems,
-			sizer:      request.NewItemsSizer(),
+			sizerType:  sizer.SizerTypeItems,
+			sizer:      itemsSizer{},
 			maxWorkers: 3,
 		},
 		{
 			name:       "bytes/one_worker",
-			sizerType:  request.SizerTypeBytes,
-			sizer:      request.NewBytesSizer(),
+			sizerType:  sizer.SizerTypeBytes,
+			sizer:      bytesSizer{},
 			maxWorkers: 1,
 		},
 		{
 			name:       "bytes/three_workers",
-			sizerType:  request.SizerTypeBytes,
-			sizer:      request.NewBytesSizer(),
+			sizerType:  sizer.SizerTypeBytes,
+			sizer:      bytesSizer{},
 			maxWorkers: 3,
 		},
 	}
@@ -92,32 +93,32 @@ func TestPartitionBatcher_NoSplit_MinThresholdZero_TimeoutDisabled(t *testing.T)
 func TestPartitionBatcher_NoSplit_TimeoutDisabled(t *testing.T) {
 	tests := []struct {
 		name       string
-		sizerType  request.SizerType
-		sizer      request.Sizer
+		sizerType  sizer.SizerType
+		sizer      batchSizer
 		maxWorkers int
 	}{
 		{
 			name:       "items/one_worker",
-			sizerType:  request.SizerTypeItems,
-			sizer:      request.NewItemsSizer(),
+			sizerType:  sizer.SizerTypeItems,
+			sizer:      itemsSizer{},
 			maxWorkers: 1,
 		},
 		{
 			name:       "items/three_workers",
-			sizerType:  request.SizerTypeItems,
-			sizer:      request.NewItemsSizer(),
+			sizerType:  sizer.SizerTypeItems,
+			sizer:      itemsSizer{},
 			maxWorkers: 3,
 		},
 		{
 			name:       "bytes/one_worker",
-			sizerType:  request.SizerTypeBytes,
-			sizer:      request.NewBytesSizer(),
+			sizerType:  sizer.SizerTypeBytes,
+			sizer:      bytesSizer{},
 			maxWorkers: 1,
 		},
 		{
 			name:       "bytes/three_workers",
-			sizerType:  request.SizerTypeBytes,
-			sizer:      request.NewBytesSizer(),
+			sizerType:  sizer.SizerTypeBytes,
+			sizer:      bytesSizer{},
 			maxWorkers: 3,
 		},
 	}
@@ -173,32 +174,32 @@ func TestPartitionBatcher_NoSplit_WithTimeout(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		sizerType  request.SizerType
-		sizer      request.Sizer
+		sizerType  sizer.SizerType
+		sizer      batchSizer
 		maxWorkers int
 	}{
 		{
 			name:       "items/one_worker",
-			sizerType:  request.SizerTypeItems,
-			sizer:      request.NewItemsSizer(),
+			sizerType:  sizer.SizerTypeItems,
+			sizer:      itemsSizer{},
 			maxWorkers: 1,
 		},
 		{
 			name:       "items/three_workers",
-			sizerType:  request.SizerTypeItems,
-			sizer:      request.NewItemsSizer(),
+			sizerType:  sizer.SizerTypeItems,
+			sizer:      itemsSizer{},
 			maxWorkers: 3,
 		},
 		{
 			name:       "bytes/one_worker",
-			sizerType:  request.SizerTypeBytes,
-			sizer:      request.NewBytesSizer(),
+			sizerType:  sizer.SizerTypeBytes,
+			sizer:      bytesSizer{},
 			maxWorkers: 1,
 		},
 		{
 			name:       "bytes/three_workers",
-			sizerType:  request.SizerTypeBytes,
-			sizer:      request.NewBytesSizer(),
+			sizerType:  sizer.SizerTypeBytes,
+			sizer:      bytesSizer{},
 			maxWorkers: 3,
 		},
 	}
@@ -244,32 +245,32 @@ func TestPartitionBatcher_Split_TimeoutDisabled(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		sizerType  request.SizerType
-		sizer      request.Sizer
+		sizerType  sizer.SizerType
+		sizer      batchSizer
 		maxWorkers int
 	}{
 		{
 			name:       "items/one_worker",
-			sizerType:  request.SizerTypeItems,
-			sizer:      request.NewItemsSizer(),
+			sizerType:  sizer.SizerTypeItems,
+			sizer:      itemsSizer{},
 			maxWorkers: 1,
 		},
 		{
 			name:       "items/three_workers",
-			sizerType:  request.SizerTypeItems,
-			sizer:      request.NewItemsSizer(),
+			sizerType:  sizer.SizerTypeItems,
+			sizer:      itemsSizer{},
 			maxWorkers: 3,
 		},
 		{
 			name:       "bytes/one_worker",
-			sizerType:  request.SizerTypeBytes,
-			sizer:      request.NewBytesSizer(),
+			sizerType:  sizer.SizerTypeBytes,
+			sizer:      bytesSizer{},
 			maxWorkers: 1,
 		},
 		{
 			name:       "bytes/three_workers",
-			sizerType:  request.SizerTypeBytes,
-			sizer:      request.NewBytesSizer(),
+			sizerType:  sizer.SizerTypeBytes,
+			sizer:      bytesSizer{},
 			maxWorkers: 3,
 		},
 	}
@@ -326,12 +327,12 @@ func TestPartitionBatcher_Split_TimeoutDisabled(t *testing.T) {
 func TestPartitionBatcher_Shutdown(t *testing.T) {
 	cfg := BatchConfig{
 		FlushTimeout: 100 * time.Second,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      10,
 	}
 
 	sink := requesttest.NewSink()
-	ba := newPartitionBatcher(cfg, request.NewItemsSizer(), nil, newWorkerPool(2), sink.Export, zap.NewNop(), nil)
+	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(2), sink.Export, zap.NewNop(), nil)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 
 	done := newFakeDone()
@@ -354,13 +355,13 @@ func TestPartitionBatcher_Shutdown(t *testing.T) {
 func TestPartitionBatcher_MergeError(t *testing.T) {
 	cfg := BatchConfig{
 		FlushTimeout: 200 * time.Second,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      5,
 		MaxSize:      7,
 	}
 
 	sink := requesttest.NewSink()
-	ba := newPartitionBatcher(cfg, request.NewItemsSizer(), nil, newWorkerPool(2), sink.Export, zap.NewNop(), nil)
+	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(2), sink.Export, zap.NewNop(), nil)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
 		require.NoError(t, ba.Shutdown(context.Background()))
@@ -386,7 +387,7 @@ func TestPartitionBatcher_MergeError(t *testing.T) {
 func TestPartitionBatcher_PartialSuccessError(t *testing.T) {
 	cfg := BatchConfig{
 		FlushTimeout: 0,
-		Sizer:        request.SizerTypeBytes,
+		Sizer:        sizer.SizerTypeBytes,
 		MinSize:      10,
 		MaxSize:      15,
 	}
@@ -394,7 +395,7 @@ func TestPartitionBatcher_PartialSuccessError(t *testing.T) {
 	core, observed := observer.New(zap.WarnLevel)
 	logger := zap.New(core)
 	sink := requesttest.NewSink()
-	ba := newPartitionBatcher(cfg, request.NewItemsSizer(), nil, newWorkerPool(1), sink.Export, logger, nil)
+	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, logger, nil)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 
 	done := newFakeDone()
@@ -428,7 +429,7 @@ func TestPartitionBatcher_PartialSuccessError(t *testing.T) {
 func TestSPartitionBatcher_PartialSuccessError_AfterOkRequest(t *testing.T) {
 	cfg := BatchConfig{
 		FlushTimeout: 0,
-		Sizer:        request.SizerTypeBytes,
+		Sizer:        sizer.SizerTypeBytes,
 		MinSize:      10,
 		MaxSize:      15,
 	}
@@ -436,7 +437,7 @@ func TestSPartitionBatcher_PartialSuccessError_AfterOkRequest(t *testing.T) {
 	core, observed := observer.New(zap.WarnLevel)
 	logger := zap.New(core)
 	sink := requesttest.NewSink()
-	ba := newPartitionBatcher(cfg, request.NewItemsSizer(), nil, newWorkerPool(1), sink.Export, logger, nil)
+	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, logger, nil)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 
 	done := newFakeDone()
@@ -496,7 +497,7 @@ func TestShardBatcher_EmptyRequestList(t *testing.T) {
 	}
 
 	sink := requesttest.NewSink()
-	ba := newPartitionBatcher(cfg, request.NewItemsSizer(), nil, newWorkerPool(1), sink.Export, zap.NewNop(), nil)
+	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), nil)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
 		require.NoError(t, ba.Shutdown(context.Background()))
@@ -542,11 +543,11 @@ func TestPartitionBatcher_ContextMerging(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := BatchConfig{
 				FlushTimeout: 0,
-				Sizer:        request.SizerTypeItems,
+				Sizer:        sizer.SizerTypeItems,
 				MinSize:      10,
 			}
 			sink := requesttest.NewSink()
-			ba := newPartitionBatcher(cfg, request.NewItemsSizer(), tt.mergeCtxFunc, newWorkerPool(1), sink.Export, zap.NewNop(), nil)
+			ba := newPartitionBatcher(cfg, itemsSizer{}, tt.mergeCtxFunc, newWorkerPool(1), sink.Export, zap.NewNop(), nil)
 			require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 
 			done := newFakeDone()
@@ -563,7 +564,7 @@ func TestPartitionBatcher_OnEmptyCallbackTriggered(t *testing.T) {
 	// Use a short idle timeout so the partition is reported empty quickly.
 	cfg := BatchConfig{
 		FlushTimeout: 10 * time.Millisecond,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      100, // High min size to ensure data doesn't flush immediately
 		Partition:    PartitionConfig{IdleTimeout: 100 * time.Millisecond},
 	}
@@ -574,7 +575,7 @@ func TestPartitionBatcher_OnEmptyCallbackTriggered(t *testing.T) {
 		onEmptyCalled.Add(1)
 	}
 
-	ba := newPartitionBatcher(cfg, request.NewItemsSizer(), nil, newWorkerPool(1), sink.Export, zap.NewNop(), onEmpty)
+	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), onEmpty)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
 		require.NoError(t, ba.Shutdown(context.Background()))
@@ -600,7 +601,7 @@ func TestPartitionBatcher_OnEmptyNotCalledWithActiveData(t *testing.T) {
 	// Test that onEmpty is NOT called when data keeps flowing
 	cfg := BatchConfig{
 		FlushTimeout: 20 * time.Millisecond,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      5,
 		Partition:    NewDefaultPartitionConfig(),
 	}
@@ -611,7 +612,7 @@ func TestPartitionBatcher_OnEmptyNotCalledWithActiveData(t *testing.T) {
 		onEmptyCalled.Add(1)
 	}
 
-	ba := newPartitionBatcher(cfg, request.NewItemsSizer(), nil, newWorkerPool(1), sink.Export, zap.NewNop(), onEmpty)
+	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), onEmpty)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
 		require.NoError(t, ba.Shutdown(context.Background()))

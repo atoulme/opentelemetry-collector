@@ -49,7 +49,7 @@ var extendedTypes = map[SchemaType]ConfigMetadata{
 	SizerType: {
 		Type: StringType,
 		GoStruct: GoStructConfig{
-			Type: "go.opentelemetry.io/collector/exporter/exporterhelper/internal/request.SizerType",
+			Type: "go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer.SizerType",
 		},
 	},
 }

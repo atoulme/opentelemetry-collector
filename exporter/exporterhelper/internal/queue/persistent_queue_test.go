@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/experr"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/hosttest"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/storagetest"
 	"go.opentelemetry.io/collector/exporter/exportertest"
 	"go.opentelemetry.io/collector/extension/extensiontest"
@@ -34,7 +35,7 @@ import (
 
 type intRequest int64
 
-func (i intRequest) MergeSplit(context.Context, int, request.SizerType, request.Request) ([]request.Request, error) {
+func (i intRequest) MergeSplit(context.Context, int, sizer.SizerType, request.Request) ([]request.Request, error) {
 	panic("implement me")
 }
 
@@ -245,7 +246,7 @@ func (f *fakeReferenceCounter) count() int64 {
 	return f.ref
 }
 
-func newSettings(sizerType request.SizerType, capacity int64) Settings[intRequest] {
+func newSettings(sizerType sizer.SizerType, capacity int64) Settings[intRequest] {
 	return Settings[intRequest]{
 		ReferenceCounter: &fakeReferenceCounter{},
 		SizerType:        sizerType,
@@ -257,7 +258,7 @@ func newSettings(sizerType request.SizerType, capacity int64) Settings[intReques
 	}
 }
 
-func newSettingsWithStorage(sizerType request.SizerType, capacity int64) Settings[intRequest] {
+func newSettingsWithStorage(sizerType sizer.SizerType, capacity int64) Settings[intRequest] {
 	set := newSettings(sizerType, capacity)
 	storageID := configstorage.ID(component.ID{})
 	set.StorageID = configoptional.Some(storageID)
@@ -265,20 +266,20 @@ func newSettingsWithStorage(sizerType request.SizerType, capacity int64) Setting
 }
 
 func createTestPersistentQueueWithClient(client storage.Client) *persistentQueue[intRequest] {
-	pq := newPersistentQueue[intRequest](newSettingsWithStorage(request.SizerTypeRequests, 1000)).(*persistentQueue[intRequest])
+	pq := newPersistentQueue[intRequest](newSettingsWithStorage(sizer.SizerTypeRequests, 1000)).(*persistentQueue[intRequest])
 	pq.initClient(context.Background(), client)
 	return pq
 }
 
 func createTestPersistentQueueWithRequestsSizer(tb testing.TB, ext storage.Extension, capacity int64) *persistentQueue[intRequest] {
-	return createTestPersistentQueue(tb, ext, request.SizerTypeRequests, capacity)
+	return createTestPersistentQueue(tb, ext, sizer.SizerTypeRequests, capacity)
 }
 
 func createTestPersistentQueueWithItemsSizer(tb testing.TB, ext storage.Extension, capacity int64) *persistentQueue[intRequest] {
-	return createTestPersistentQueue(tb, ext, request.SizerTypeItems, capacity)
+	return createTestPersistentQueue(tb, ext, sizer.SizerTypeItems, capacity)
 }
 
-func createTestPersistentQueue(tb testing.TB, ext storage.Extension, sizerType request.SizerType, capacity int64) *persistentQueue[intRequest] {
+func createTestPersistentQueue(tb testing.TB, ext storage.Extension, sizerType sizer.SizerType, capacity int64) *persistentQueue[intRequest] {
 	pq := newPersistentQueue[intRequest](newSettingsWithStorage(sizerType, capacity))
 	require.NoError(tb, pq.Start(context.Background(), hosttest.NewHost(map[component.ID]component.Component{{}: ext})))
 	return pq.(*persistentQueue[intRequest])
@@ -287,25 +288,25 @@ func createTestPersistentQueue(tb testing.TB, ext storage.Extension, sizerType r
 func TestPersistentQueue_FullCapacity(t *testing.T) {
 	tests := []struct {
 		name           string
-		sizerType      request.SizerType
+		sizerType      sizer.SizerType
 		capacity       int64
 		sizeMultiplier int64
 	}{
 		{
 			name:           "requests_capacity",
-			sizerType:      request.SizerTypeRequests,
+			sizerType:      sizer.SizerTypeRequests,
 			capacity:       5,
 			sizeMultiplier: 1,
 		},
 		{
 			name:           "items_capacity",
-			sizerType:      request.SizerTypeItems,
+			sizerType:      sizer.SizerTypeItems,
 			capacity:       55,
 			sizeMultiplier: 10,
 		},
 		{
 			name:           "bytes_capacity",
-			sizerType:      request.SizerTypeBytes,
+			sizerType:      sizer.SizerTypeBytes,
 			capacity:       550,
 			sizeMultiplier: 100,
 		},
@@ -340,7 +341,7 @@ func TestPersistentQueue_FullCapacity(t *testing.T) {
 
 func TestPersistentQueue_Shutdown(t *testing.T) {
 	ext := storagetest.NewMockStorageExtension(nil)
-	pq := createTestPersistentQueue(t, ext, request.SizerTypeRequests, 1001)
+	pq := createTestPersistentQueue(t, ext, sizer.SizerTypeRequests, 1001)
 	req := intRequest(10)
 
 	for range 1000 {
@@ -380,7 +381,7 @@ func TestPersistentQueue_ConsumersProducers(t *testing.T) {
 		t.Run(fmt.Sprintf("#messages: %d #consumers: %d", c.numMessagesProduced, c.numConsumers), func(t *testing.T) {
 			consumed := &atomic.Int64{}
 
-			pq := newPersistentQueue[intRequest](newSettingsWithStorage(request.SizerTypeRequests, 1000))
+			pq := newPersistentQueue[intRequest](newSettingsWithStorage(sizer.SizerTypeRequests, 1000))
 			aq := newAsyncQueue[intRequest](pq, c.numConsumers, func(_ context.Context, _ intRequest, done Done) {
 				consumed.Add(int64(1))
 				done.OnDone(nil)
@@ -407,15 +408,15 @@ func TestPersistentQueue_ConsumersProducers(t *testing.T) {
 func TestPersistentBlockingQueue(t *testing.T) {
 	tests := []struct {
 		name      string
-		sizerType request.SizerType
+		sizerType sizer.SizerType
 	}{
 		{
 			name:      "requests_based",
-			sizerType: request.SizerTypeRequests,
+			sizerType: sizer.SizerTypeRequests,
 		},
 		{
 			name:      "items_based",
-			sizerType: request.SizerTypeItems,
+			sizerType: sizer.SizerTypeItems,
 		},
 	}
 

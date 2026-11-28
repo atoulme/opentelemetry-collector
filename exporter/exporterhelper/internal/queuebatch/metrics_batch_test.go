@@ -20,7 +20,7 @@ import (
 func TestMergeMetrics(t *testing.T) {
 	mr1 := newMetricsRequest(testdata.GenerateMetrics(2))
 	mr2 := newMetricsRequest(testdata.GenerateMetrics(3))
-	res, err := mr1.MergeSplit(context.Background(), 0, request.SizerTypeItems, mr2)
+	res, err := mr1.MergeSplit(context.Background(), 0, sizer.SizerTypeItems, mr2)
 	require.NoError(t, err)
 	// Every metric has 2 data points.
 	assert.Equal(t, 2*5, res[0].ItemsCount())
@@ -30,7 +30,7 @@ func TestMergeSplitMetrics(t *testing.T) {
 	s := sizer.MetricsCountSizer{}
 	tests := []struct {
 		name     string
-		szt      request.SizerType
+		szt      sizer.SizerType
 		maxSize  int
 		mr1      request.Request
 		mr2      request.Request
@@ -38,7 +38,7 @@ func TestMergeSplitMetrics(t *testing.T) {
 	}{
 		{
 			name:     "both_requests_empty",
-			szt:      request.SizerTypeItems,
+			szt:      sizer.SizerTypeItems,
 			maxSize:  10,
 			mr1:      newMetricsRequest(pmetric.NewMetrics()),
 			mr2:      newMetricsRequest(pmetric.NewMetrics()),
@@ -46,7 +46,7 @@ func TestMergeSplitMetrics(t *testing.T) {
 		},
 		{
 			name:     "first_request_empty",
-			szt:      request.SizerTypeItems,
+			szt:      sizer.SizerTypeItems,
 			maxSize:  10,
 			mr1:      newMetricsRequest(pmetric.NewMetrics()),
 			mr2:      newMetricsRequest(testdata.GenerateMetrics(5)),
@@ -54,7 +54,7 @@ func TestMergeSplitMetrics(t *testing.T) {
 		},
 		{
 			name:     "first_empty_second_nil",
-			szt:      request.SizerTypeItems,
+			szt:      sizer.SizerTypeItems,
 			maxSize:  10,
 			mr1:      newMetricsRequest(pmetric.NewMetrics()),
 			mr2:      nil,
@@ -62,7 +62,7 @@ func TestMergeSplitMetrics(t *testing.T) {
 		},
 		{
 			name:    "merge_only",
-			szt:     request.SizerTypeItems,
+			szt:     sizer.SizerTypeItems,
 			maxSize: 60,
 			mr1:     newMetricsRequest(testdata.GenerateMetrics(10)),
 			mr2:     newMetricsRequest(testdata.GenerateMetrics(14)),
@@ -74,7 +74,7 @@ func TestMergeSplitMetrics(t *testing.T) {
 		},
 		{
 			name:    "split_only",
-			szt:     request.SizerTypeItems,
+			szt:     sizer.SizerTypeItems,
 			maxSize: 14,
 			mr1:     newMetricsRequest(pmetric.NewMetrics()),
 			mr2:     newMetricsRequest(testdata.GenerateMetrics(15)), // 15 metrics, 30 data points
@@ -86,7 +86,7 @@ func TestMergeSplitMetrics(t *testing.T) {
 		},
 		{
 			name:    "split_and_merge",
-			szt:     request.SizerTypeItems,
+			szt:     sizer.SizerTypeItems,
 			maxSize: 28,
 			mr1:     newMetricsRequest(testdata.GenerateMetrics(7)),  // 7 metrics, 14 data points
 			mr2:     newMetricsRequest(testdata.GenerateMetrics(25)), // 25 metrics, 50 data points
@@ -102,7 +102,7 @@ func TestMergeSplitMetrics(t *testing.T) {
 		},
 		{
 			name:    "scope_metrics_split",
-			szt:     request.SizerTypeItems,
+			szt:     sizer.SizerTypeItems,
 			maxSize: 8,
 			mr1: newMetricsRequest(func() pmetric.Metrics {
 				md := testdata.GenerateMetrics(4)
@@ -130,7 +130,7 @@ func TestMergeSplitMetrics(t *testing.T) {
 			for i := range res {
 				expected := tt.expected[i].(*metricsRequest)
 				actual := res[i].(*metricsRequest)
-				assert.Equal(t, expected.size(&s, request.SizerTypeItems), actual.size(&s, request.SizerTypeItems))
+				assert.Equal(t, expected.size(&s, sizer.SizerTypeItems), actual.size(&s, sizer.SizerTypeItems))
 			}
 		})
 	}
@@ -208,7 +208,7 @@ func TestSplitMetricsWithDataPointSplit(t *testing.T) {
 			mr1 := newMetricsRequest(generateTestMetrics(tt.metricType))
 
 			// Split by data point, so maxSize is 1.
-			res, err := mr1.MergeSplit(context.Background(), 1, request.SizerTypeItems, nil)
+			res, err := mr1.MergeSplit(context.Background(), 1, sizer.SizerTypeItems, nil)
 			require.NoError(t, err)
 			require.Len(t, res, 2)
 
@@ -232,7 +232,7 @@ func TestSplitMetricsWithDataPointSplit(t *testing.T) {
 func TestMergeSplitMetricsInputNotModifiedIfErrorReturned(t *testing.T) {
 	r1 := newMetricsRequest(testdata.GenerateMetrics(18)) // 18 metrics, 36 data points
 	r2 := newLogsRequest(testdata.GenerateLogs(3))
-	_, err := r1.MergeSplit(context.Background(), 10, request.SizerTypeItems, r2)
+	_, err := r1.MergeSplit(context.Background(), 10, sizer.SizerTypeItems, r2)
 	require.Error(t, err)
 	assert.Equal(t, 36, r1.ItemsCount())
 }
@@ -258,7 +258,7 @@ func TestMergeSplitManySmallMetrics(t *testing.T) {
 	merged := []request.Request{newMetricsRequest(testdata.GenerateMetrics(1))}
 	for range 1000 {
 		lr2 := newMetricsRequest(testdata.GenerateMetrics(10))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, request.SizerTypeItems, lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, sizer.SizerTypeItems, lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 	}
 	assert.Len(t, merged, 2)
@@ -272,7 +272,7 @@ func BenchmarkSplittingBasedOnItemCountManySmallMetrics(b *testing.B) {
 		merged := []request.Request{newMetricsRequest(testdata.GenerateMetrics(10))}
 		for range 1000 {
 			lr2 := newMetricsRequest(testdata.GenerateMetrics(10))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20020, request.SizerTypeItems, lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20020, sizer.SizerTypeItems, lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 1)
@@ -287,7 +287,7 @@ func BenchmarkSplittingBasedOnItemCountManyMetricsSlightlyAboveLimit(b *testing.
 		merged := []request.Request{newMetricsRequest(testdata.GenerateMetrics(0))}
 		for range 10 {
 			lr2 := newMetricsRequest(testdata.GenerateMetrics(10001))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, request.SizerTypeItems, lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, sizer.SizerTypeItems, lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 11)
@@ -301,7 +301,7 @@ func BenchmarkSplittingBasedOnItemCountHugeMetrics(b *testing.B) {
 	for b.Loop() {
 		merged := []request.Request{newMetricsRequest(testdata.GenerateMetrics(0))}
 		lr2 := newMetricsRequest(testdata.GenerateMetrics(100000))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, request.SizerTypeItems, lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 20000, sizer.SizerTypeItems, lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 		assert.Len(b, merged, 10)
 	}
@@ -310,7 +310,7 @@ func BenchmarkSplittingBasedOnItemCountHugeMetrics(b *testing.B) {
 func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 	tests := []struct {
 		name             string
-		szt              request.SizerType
+		szt              sizer.SizerType
 		maxSize          int
 		mr1              request.Request
 		mr2              request.Request
@@ -319,7 +319,7 @@ func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 	}{
 		{
 			name:     "both_requests_empty",
-			szt:      request.SizerTypeBytes,
+			szt:      sizer.SizerTypeBytes,
 			maxSize:  metricsMarshaler.MetricsSize(testdata.GenerateMetrics(10)),
 			mr1:      newMetricsRequest(pmetric.NewMetrics()),
 			mr2:      newMetricsRequest(pmetric.NewMetrics()),
@@ -327,7 +327,7 @@ func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 		},
 		{
 			name:     "first_request_empty",
-			szt:      request.SizerTypeBytes,
+			szt:      sizer.SizerTypeBytes,
 			maxSize:  metricsMarshaler.MetricsSize(testdata.GenerateMetrics(10)),
 			mr1:      newMetricsRequest(pmetric.NewMetrics()),
 			mr2:      newMetricsRequest(testdata.GenerateMetrics(5)),
@@ -335,7 +335,7 @@ func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 		},
 		{
 			name:     "first_empty_second_nil",
-			szt:      request.SizerTypeBytes,
+			szt:      sizer.SizerTypeBytes,
 			maxSize:  metricsMarshaler.MetricsSize(testdata.GenerateMetrics(10)),
 			mr1:      newMetricsRequest(pmetric.NewMetrics()),
 			mr2:      nil,
@@ -343,7 +343,7 @@ func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 		},
 		{
 			name:    "merge_only",
-			szt:     request.SizerTypeBytes,
+			szt:     sizer.SizerTypeBytes,
 			maxSize: metricsMarshaler.MetricsSize(testdata.GenerateMetrics(15)) - 1,
 			mr1:     newMetricsRequest(testdata.GenerateMetrics(7)),
 			mr2:     newMetricsRequest(testdata.GenerateMetrics(7)),
@@ -355,7 +355,7 @@ func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 		},
 		{
 			name:    "split_only",
-			szt:     request.SizerTypeBytes,
+			szt:     sizer.SizerTypeBytes,
 			maxSize: metricsMarshaler.MetricsSize(testdata.GenerateMetrics(7)) + 1,
 			mr1:     newMetricsRequest(pmetric.NewMetrics()),
 			mr2:     newMetricsRequest(testdata.GenerateMetrics(17)),
@@ -367,7 +367,7 @@ func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 		},
 		{
 			name:    "merge_and_split",
-			szt:     request.SizerTypeBytes,
+			szt:     sizer.SizerTypeBytes,
 			maxSize: metricsMarshaler.MetricsSize(testdata.GenerateMetrics(7)) + 1,
 			mr1:     newMetricsRequest(testdata.GenerateMetrics(14)),
 			mr2:     newMetricsRequest(testdata.GenerateMetrics(11)),
@@ -380,7 +380,7 @@ func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 		},
 		{
 			name:    "scope_metrics_split",
-			szt:     request.SizerTypeBytes,
+			szt:     sizer.SizerTypeBytes,
 			maxSize: metricsMarshaler.MetricsSize(testdata.GenerateMetrics(7)) + 1,
 			mr1: newMetricsRequest(func() pmetric.Metrics {
 				md := testdata.GenerateMetrics(7)
@@ -427,7 +427,7 @@ func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 		},
 		{
 			name:    "unsplittable_large_metric",
-			szt:     request.SizerTypeBytes,
+			szt:     sizer.SizerTypeBytes,
 			maxSize: 10,
 			mr1: newMetricsRequest(func() pmetric.Metrics {
 				md := testdata.GenerateMetrics(1)
@@ -440,7 +440,7 @@ func TestMergeSplitMetricsBasedOnByteSize(t *testing.T) {
 		},
 		{
 			name:    "splittable_then_unsplittable_metric",
-			szt:     request.SizerTypeBytes,
+			szt:     sizer.SizerTypeBytes,
 			maxSize: 1000,
 			mr1: newMetricsRequest(func() pmetric.Metrics {
 				md := testdata.GenerateMetrics(2)
@@ -725,7 +725,7 @@ func TestExtractSummaryDataPoints(t *testing.T) {
 func TestMetricsMergeSplitUnknownSizerType(t *testing.T) {
 	req := newMetricsRequest(pmetric.NewMetrics())
 	// Call MergeSplit with invalid sizer
-	_, err := req.MergeSplit(context.Background(), 0, request.SizerType{}, nil)
+	_, err := req.MergeSplit(context.Background(), 0, sizer.SizerType{}, nil)
 	require.EqualError(t, err, "unknown sizer type")
 }
 

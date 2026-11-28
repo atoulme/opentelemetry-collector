@@ -20,7 +20,7 @@ import (
 type multiBatcher struct {
 	cfg         BatchConfig
 	wp          *workerPool
-	sizer       request.Sizer
+	sizer       batchSizer
 	partitioner Partitioner[request.Request]
 	mergeCtx    func(context.Context, context.Context) context.Context
 	consumeFunc sender.SendFunc[request.Request]
@@ -31,7 +31,7 @@ type multiBatcher struct {
 
 func newMultiBatcher(
 	bCfg BatchConfig,
-	sizer request.Sizer,
+	sizer batchSizer,
 	wp *workerPool,
 	set batcherSettings[request.Request],
 ) (*multiBatcher, error) {

@@ -51,6 +51,7 @@ func TestDisabledBatcher(t *testing.T) {
 				BlockOnOverflow: true,
 				NumConsumers:    tt.maxWorkers,
 				Telemetry:       componenttest.NewNopTelemetrySettings(),
+				SizerType:       getDefaultSizer(),
 			}, ba.Consume)
 			require.NoError(t, err)
 

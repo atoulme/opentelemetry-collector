@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
 func (cfg *Config) Unmarshal(conf *confmap.Conf) error {
@@ -47,15 +47,15 @@ func validateConfig(cfg *Config) error {
 	return nil
 }
 
-func getDefaultSizer() request.SizerType {
-	return request.SizerTypeItems
+func getDefaultSizer() sizer.SizerType {
+	return sizer.SizerTypeItems
 }
 
 // validateBatchConfig implements BatchConfig validation that cannot
 // be expressed with config schema rules
 func validateBatchConfig(cfg *BatchConfig) error {
 	// Only support items or bytes sizer for batch at this moment.
-	if cfg.Sizer != request.SizerTypeItems && cfg.Sizer != request.SizerTypeBytes {
+	if cfg.Sizer != sizer.SizerTypeItems && cfg.Sizer != sizer.SizerTypeBytes {
 		return fmt.Errorf("`batch` supports only `items` or `bytes` sizer, found %q", cfg.Sizer.String())
 	}
 	if cfg.MaxSize > 0 && cfg.MaxSize < cfg.MinSize {

@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/queuebatch"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sender"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
 // NewDefaultQueueConfig returns the default config for queuebatch.Config.
@@ -35,7 +36,7 @@ func NewDefaultQueueConfig() queuebatch.Config {
 		batch = configoptional.Default(batchCfg)
 	}
 	return queuebatch.Config{
-		Sizer:           request.SizerTypeRequests,
+		Sizer:           sizer.SizerTypeRequests,
 		NumConsumers:    10,
 		QueueSize:       1_000,
 		BlockOnOverflow: false,

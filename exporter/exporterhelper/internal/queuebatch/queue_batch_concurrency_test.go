@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 	"go.opentelemetry.io/collector/exporter/exportertest"
 	"go.opentelemetry.io/collector/pdata/testdata"
 	"go.opentelemetry.io/collector/pipeline"
@@ -89,13 +90,13 @@ func TestQueueBatchConcurrentRequests(t *testing.T) {
 			})
 
 			cfg := Config{
-				Sizer:           request.SizerTypeItems,
+				Sizer:           sizer.SizerTypeItems,
 				NumConsumers:    runtime.NumCPU(),
 				QueueSize:       1_000_000,
 				BlockOnOverflow: true,
 				Batch: configoptional.Some(BatchConfig{
 					FlushTimeout: 10 * time.Millisecond,
-					Sizer:        request.SizerTypeItems,
+					Sizer:        sizer.SizerTypeItems,
 					// Neither bound is a multiple of perRequest, so every partition hits both
 					// mergeTo and split, the two places that mutate the payload and rewrite
 					// the size caches.

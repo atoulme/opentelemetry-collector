@@ -15,12 +15,12 @@ import (
 
 // MergeSplit splits and/or merges the provided traces request and the current request into one or more requests
 // conforming with the MaxSizeConfig.
-func (req *tracesRequest) MergeSplit(_ context.Context, maxSize int, szt request.SizerType, r2 request.Request) ([]request.Request, error) {
+func (req *tracesRequest) MergeSplit(_ context.Context, maxSize int, szt sizer.SizerType, r2 request.Request) ([]request.Request, error) {
 	var sz sizer.TracesSizer
 	switch szt {
-	case request.SizerTypeItems:
+	case sizer.SizerTypeItems:
 		sz = &sizer.TracesCountSizer{}
-	case request.SizerTypeBytes:
+	case sizer.SizerTypeBytes:
 		sz = &sizer.TracesBytesSizer{}
 	default:
 		return nil, errors.New("unknown sizer type")
@@ -41,7 +41,7 @@ func (req *tracesRequest) MergeSplit(_ context.Context, maxSize int, szt request
 	return req.split(maxSize, sz, szt)
 }
 
-func (req *tracesRequest) mergeTo(dst *tracesRequest, sz sizer.TracesSizer, szt request.SizerType) {
+func (req *tracesRequest) mergeTo(dst *tracesRequest, sz sizer.TracesSizer, szt sizer.SizerType) {
 	if sz != nil {
 		dst.sizes.Update(szt, dst.size(sz, szt)+req.size(sz, szt))
 		req.sizes.Update(szt, 0)
@@ -49,7 +49,7 @@ func (req *tracesRequest) mergeTo(dst *tracesRequest, sz sizer.TracesSizer, szt 
 	req.td.ResourceSpans().MoveAndAppendTo(dst.td.ResourceSpans())
 }
 
-func (req *tracesRequest) split(maxSize int, sz sizer.TracesSizer, szt request.SizerType) ([]request.Request, error) {
+func (req *tracesRequest) split(maxSize int, sz sizer.TracesSizer, szt sizer.SizerType) ([]request.Request, error) {
 	if req.size(sz, szt) <= maxSize {
 		return []request.Request{req}, nil
 	}

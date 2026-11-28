@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/requesttest"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sender"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 	"go.opentelemetry.io/collector/exporter/exportertest"
 	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/pipeline"
@@ -63,7 +64,7 @@ func TestNewDefaultQueueConfigBatchFeatureGate(t *testing.T) {
 	require.True(t, qCfg.Batch.HasValue())
 	require.Equal(t, int64(8192), qCfg.Batch.Get().MinSize)
 	require.Equal(t, 200*time.Millisecond, qCfg.Batch.Get().FlushTimeout)
-	require.Equal(t, request.SizerTypeItems, qCfg.Batch.Get().Sizer)
+	require.Equal(t, sizer.SizerTypeItems, qCfg.Batch.Get().Sizer)
 	require.Equal(t, 10000, qCfg.Batch.Get().Partition.CacheSize)
 	require.Equal(t, 90*time.Second, qCfg.Batch.Get().Partition.IdleTimeout)
 }

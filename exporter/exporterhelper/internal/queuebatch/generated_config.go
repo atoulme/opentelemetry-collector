@@ -8,7 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/config/configstorage"
-	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
 // BatchConfig defines a configuration for batching requests based on a timeout and a minimum number of items.
@@ -19,7 +19,7 @@ type BatchConfig struct {
 	// Sizer determines the type of size measurement used by the batch.
 	// If not configured, use the same configuration as the queue.
 	// It accepts "requests", "items", or "bytes".
-	Sizer request.SizerType `mapstructure:"sizer"`
+	Sizer sizer.SizerType `mapstructure:"sizer"`
 
 	// MinSize defines the configuration for the minimum size of a batch.
 	MinSize int64 `mapstructure:"min_size"`
@@ -77,7 +77,7 @@ type Config struct {
 
 	// Sizer determines the type of size measurement used by this component.
 	// It accepts "requests", "items", or "bytes".
-	Sizer request.SizerType `mapstructure:"sizer,omitempty"`
+	Sizer sizer.SizerType `mapstructure:"sizer,omitempty"`
 
 	// QueueSize represents the maximum data size allowed for concurrent storage and processing.
 	QueueSize int64 `mapstructure:"queue_size,omitempty"`

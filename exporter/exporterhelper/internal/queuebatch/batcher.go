@@ -37,7 +37,7 @@ func NewBatcher(cfg configoptional.Optional[BatchConfig], set batcherSettings[re
 		return newDisabledBatcher(set.next), nil
 	}
 
-	sizer := request.NewSizer(cfg.Get().Sizer)
+	sizer := newSizer(cfg.Get().Sizer)
 
 	if set.partitioner == nil {
 		return newShardedBatcher(*cfg.Get(), sizer, set.mergeCtx, newWorkerPool(set.maxWorkers), set.next, set.logger, 1)

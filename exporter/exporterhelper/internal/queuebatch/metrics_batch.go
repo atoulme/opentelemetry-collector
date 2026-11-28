@@ -15,12 +15,12 @@ import (
 
 // MergeSplit splits and/or merges the provided metrics request and the current request into one or more requests
 // conforming with the MaxSizeConfig.
-func (req *metricsRequest) MergeSplit(_ context.Context, maxSize int, szt request.SizerType, r2 request.Request) ([]request.Request, error) {
+func (req *metricsRequest) MergeSplit(_ context.Context, maxSize int, szt sizer.SizerType, r2 request.Request) ([]request.Request, error) {
 	var sz sizer.MetricsSizer
 	switch szt {
-	case request.SizerTypeItems:
+	case sizer.SizerTypeItems:
 		sz = &sizer.MetricsCountSizer{}
-	case request.SizerTypeBytes:
+	case sizer.SizerTypeBytes:
 		sz = &sizer.MetricsBytesSizer{}
 	default:
 		return nil, errors.New("unknown sizer type")
@@ -41,7 +41,7 @@ func (req *metricsRequest) MergeSplit(_ context.Context, maxSize int, szt reques
 	return req.split(maxSize, sz, szt)
 }
 
-func (req *metricsRequest) mergeTo(dst *metricsRequest, sz sizer.MetricsSizer, szt request.SizerType) {
+func (req *metricsRequest) mergeTo(dst *metricsRequest, sz sizer.MetricsSizer, szt sizer.SizerType) {
 	if sz != nil {
 		dst.sizes.Update(szt, dst.size(sz, szt)+req.size(sz, szt))
 		req.sizes.Update(szt, 0)
@@ -49,7 +49,7 @@ func (req *metricsRequest) mergeTo(dst *metricsRequest, sz sizer.MetricsSizer, s
 	req.md.ResourceMetrics().MoveAndAppendTo(dst.md.ResourceMetrics())
 }
 
-func (req *metricsRequest) split(maxSize int, sz sizer.MetricsSizer, szt request.SizerType) ([]request.Request, error) {
+func (req *metricsRequest) split(maxSize int, sz sizer.MetricsSizer, szt sizer.SizerType) ([]request.Request, error) {
 	var res []request.Request
 	for req.size(sz, szt) > maxSize {
 		md, rmSize := extractMetrics(req.md, maxSize, sz)

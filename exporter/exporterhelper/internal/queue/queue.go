@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/config/configstorage"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 	queuebatchtelemetry "go.opentelemetry.io/collector/internal/telemetry/queuebatch"
 	"go.opentelemetry.io/collector/pipeline"
 )
@@ -70,7 +71,7 @@ type Queue[T any] interface {
 
 // Settings define internal parameters for a new Queue creation.
 type Settings[T request.Request] struct {
-	SizerType        request.SizerType
+	SizerType        sizer.SizerType
 	Capacity         int64
 	NumConsumers     int
 	WaitForResult    bool

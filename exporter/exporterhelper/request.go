@@ -4,13 +4,13 @@
 package exporterhelper // import "go.opentelemetry.io/collector/exporter/exporterhelper"
 
 import (
-	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
-type RequestSizerType = request.SizerType
+type RequestSizerType = sizer.SizerType
 
 var (
-	RequestSizerTypeBytes    = request.SizerTypeBytes
-	RequestSizerTypeItems    = request.SizerTypeItems
-	RequestSizerTypeRequests = request.SizerTypeRequests
+	RequestSizerTypeBytes    = sizer.SizerTypeBytes
+	RequestSizerTypeItems    = sizer.SizerTypeItems
+	RequestSizerTypeRequests = sizer.SizerTypeRequests
 )

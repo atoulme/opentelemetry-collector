@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/queue"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/requesttest"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 	"go.opentelemetry.io/collector/exporter/exportertest"
 	queuebatchtelemetry "go.opentelemetry.io/collector/internal/telemetry/queuebatch"
 	"go.opentelemetry.io/collector/pipeline"
@@ -32,14 +33,14 @@ type partitionKey struct{}
 func TestMultiBatcher_NoTimeout(t *testing.T) {
 	cfg := BatchConfig{
 		FlushTimeout: 0,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      10,
 		Partition:    NewDefaultPartitionConfig(),
 	}
 	sink := requesttest.NewSink()
 
 	ba, err := newMultiBatcher(cfg,
-		request.NewItemsSizer(),
+		itemsSizer{},
 		newWorkerPool(1),
 		batcherSettings[request.Request]{
 			partitioner: NewPartitioner(func(ctx context.Context, _ request.Request) string {
@@ -89,14 +90,14 @@ func TestMultiBatcher_NoTimeout(t *testing.T) {
 func TestMultiBatcher_Timeout(t *testing.T) {
 	cfg := BatchConfig{
 		FlushTimeout: 100 * time.Millisecond,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      100,
 		Partition:    NewDefaultPartitionConfig(),
 	}
 	sink := requesttest.NewSink()
 
 	ba, err := newMultiBatcher(cfg,
-		request.NewItemsSizer(),
+		itemsSizer{},
 		newWorkerPool(1),
 		batcherSettings[request.Request]{
 			partitioner: NewPartitioner(func(ctx context.Context, _ request.Request) string {
@@ -138,14 +139,14 @@ func TestMultiBatcher_PartitionRemovedAfterIdleTimeout(t *testing.T) {
 	// Use a short idle timeout so the partition is evicted quickly.
 	cfg := BatchConfig{
 		FlushTimeout: 10 * time.Millisecond,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      100, // High min size to prevent immediate flush
 		Partition:    PartitionConfig{CacheSize: 10, IdleTimeout: 100 * time.Millisecond},
 	}
 	sink := requesttest.NewSink()
 
 	ba, err := newMultiBatcher(cfg,
-		request.NewItemsSizer(),
+		itemsSizer{},
 		newWorkerPool(1),
 		batcherSettings[request.Request]{
 			partitioner: NewPartitioner(func(ctx context.Context, _ request.Request) string {
@@ -182,7 +183,7 @@ func TestMultiBatcher_PartitionRemovedAfterIdleTimeout(t *testing.T) {
 func TestMultiBatcher_CacheSizeEviction(t *testing.T) {
 	cfg := BatchConfig{
 		FlushTimeout: 0,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      100,
 		Partition:    PartitionConfig{CacheSize: 2, IdleTimeout: time.Minute},
 	}
@@ -191,7 +192,7 @@ func TestMultiBatcher_CacheSizeEviction(t *testing.T) {
 	// Evicting a partition flushes it through the worker pool, which in turn needs
 	// a worker to send the pending batch, so more than one worker is required.
 	ba, err := newMultiBatcher(cfg,
-		request.NewItemsSizer(),
+		itemsSizer{},
 		newWorkerPool(2),
 		batcherSettings[request.Request]{
 			partitioner: NewPartitioner(func(ctx context.Context, _ request.Request) string {
@@ -226,7 +227,7 @@ func TestMultiBatcher_PartitionCacheMetrics(t *testing.T) {
 	exporterID := component.NewID(exportertest.NopType)
 	cfg := BatchConfig{
 		FlushTimeout: 0,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      100,
 		Partition:    PartitionConfig{CacheSize: 5, IdleTimeout: time.Minute},
 	}
@@ -241,7 +242,7 @@ func TestMultiBatcher_PartitionCacheMetrics(t *testing.T) {
 	t.Cleanup(obsMetrics.Shutdown)
 
 	ba, err := newMultiBatcher(cfg,
-		request.NewItemsSizer(),
+		itemsSizer{},
 		newWorkerPool(1),
 		batcherSettings[request.Request]{
 			partitioner: NewPartitioner(func(ctx context.Context, _ request.Request) string {
@@ -301,11 +302,11 @@ func TestMultiBatcher_NewError(t *testing.T) {
 			_, err := newMultiBatcher(
 				BatchConfig{
 					FlushTimeout: 0,
-					Sizer:        request.SizerTypeItems,
+					Sizer:        sizer.SizerTypeItems,
 					MinSize:      10,
 					Partition:    PartitionConfig{CacheSize: tt.cacheSize, IdleTimeout: time.Minute},
 				},
-				request.NewItemsSizer(),
+				itemsSizer{},
 				newWorkerPool(1),
 				batcherSettings[request.Request]{
 					partitioner: NewPartitioner(func(_ context.Context, _ request.Request) string {

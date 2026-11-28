@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/hosttest"
-	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/storagetest"
 )
 
@@ -277,7 +277,7 @@ func TestBlockedOfferCancellationDoesNotConsumeCapacityNotification(t *testing.T
 		{
 			name: "memory",
 			new: func() (readableQueue[intRequest], *cond, sync.Locker, component.Host) {
-				set := newSettings(request.SizerTypeRequests, 2)
+				set := newSettings(sizer.SizerTypeRequests, 2)
 				set.BlockOnOverflow = true
 				q := newMemoryQueue[intRequest](set).(*memoryQueue[intRequest])
 				return q, q.hasMoreSpace, &q.mu, componenttest.NewNopHost()
@@ -286,7 +286,7 @@ func TestBlockedOfferCancellationDoesNotConsumeCapacityNotification(t *testing.T
 		{
 			name: "persistent",
 			new: func() (readableQueue[intRequest], *cond, sync.Locker, component.Host) {
-				set := newSettingsWithStorage(request.SizerTypeRequests, 2)
+				set := newSettingsWithStorage(sizer.SizerTypeRequests, 2)
 				set.BlockOnOverflow = true
 				q := newPersistentQueue[intRequest](set).(*persistentQueue[intRequest])
 				host := hosttest.NewHost(map[component.ID]component.Component{

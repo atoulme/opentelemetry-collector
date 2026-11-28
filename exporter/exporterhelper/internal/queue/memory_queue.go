@@ -6,10 +6,12 @@ package queue // import "go.opentelemetry.io/collector/exporter/exporterhelper/i
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
 var (
@@ -21,7 +23,7 @@ var (
 type memoryQueue[T request.Request] struct {
 	component.StartFunc
 	refCounter ReferenceCounter[T]
-	sizer      request.Sizer
+	sizerType  sizer.SizerType
 	cap        int64
 	donePool   sync.Pool
 
@@ -39,7 +41,7 @@ type memoryQueue[T request.Request] struct {
 // capacity is the capacity of the queue.
 func newMemoryQueue[T request.Request](set Settings[T]) readableQueue[T] {
 	sq := &memoryQueue[T]{
-		sizer:           request.NewSizer(set.SizerType),
+		sizerType:       set.SizerType,
 		cap:             set.Capacity,
 		items:           &linkedQueue[T]{},
 		waitForResult:   set.WaitForResult,
@@ -59,7 +61,17 @@ func newMemoryQueue[T request.Request](set Settings[T]) readableQueue[T] {
 // Offer puts the element into the queue with the given sized if there is enough capacity.
 // Returns an error if the queue is full.
 func (mq *memoryQueue[T]) Offer(ctx context.Context, el T) error {
-	elSize := mq.sizer.Sizeof(el)
+	var elSize int
+	switch mq.sizerType {
+	case sizer.SizerTypeItems:
+		elSize = el.ItemsCount()
+	case sizer.SizerTypeBytes:
+		elSize = el.BytesSize()
+	case sizer.SizerTypeRequests:
+		elSize = 1
+	default:
+		return fmt.Errorf("unknown sizer type %q", mq.sizerType)
+	}
 	// Ignore empty requests, see https://github.com/open-telemetry/opentelemetry-proto/blob/main/docs/specification.md#empty-telemetry-envelopes
 	if elSize == 0 {
 		return nil
@@ -69,8 +81,9 @@ func (mq *memoryQueue[T]) Offer(ctx context.Context, el T) error {
 		return errInvalidSize
 	}
 
+	elSizeInt64 := int64(elSize)
 	// If element larger than the capacity, will never been able to add it.
-	if elSize > mq.cap {
+	if elSizeInt64 > mq.cap {
 		return errSizeTooLarge
 	}
 
@@ -78,7 +91,7 @@ func (mq *memoryQueue[T]) Offer(ctx context.Context, el T) error {
 		mq.refCounter.Ref(el)
 	}
 
-	n, done, err := mq.add(ctx, el, elSize)
+	n, done, err := mq.add(ctx, el, elSizeInt64)
 	if err != nil {
 		// Unref in case of an error since there will not be any async worker to pick it up.
 		if mq.refCounter != nil {

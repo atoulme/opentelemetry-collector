@@ -17,11 +17,12 @@ import (
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
 	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/requesttest"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
 func TestShardedBatcherRequiresPositiveShardCount(t *testing.T) {
 	sink := requesttest.NewSink()
-	sb, err := newShardedBatcher(BatchConfig{}, request.NewItemsSizer(), nil, newWorkerPool(1), sink.Export, zap.NewNop(), 0)
+	sb, err := newShardedBatcher(BatchConfig{}, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), 0)
 
 	require.Error(t, err)
 	assert.Nil(t, sb)
@@ -31,7 +32,7 @@ func TestNewBatcherUsesOneShardForUnpartitionedBatching(t *testing.T) {
 	sink := requesttest.NewSink()
 	batcher, err := NewBatcher(configoptional.Some(BatchConfig{
 		FlushTimeout: 50 * time.Millisecond,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      10,
 	}), batcherSettings[request.Request]{
 		next:       sink.Export,
@@ -49,9 +50,9 @@ func TestShardedBatcherOneShardFlushesOnMinSize(t *testing.T) {
 	sink := requesttest.NewSink()
 	sb, err := newShardedBatcher(BatchConfig{
 		FlushTimeout: 0,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      10,
-	}, request.NewItemsSizer(), nil, newWorkerPool(1), sink.Export, zap.NewNop(), 1)
+	}, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), 1)
 	require.NoError(t, err)
 	require.NoError(t, sb.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
@@ -72,9 +73,9 @@ func TestShardedBatcherMultipleShardsFlushOnMinSize(t *testing.T) {
 	sink := requesttest.NewSink()
 	sb, err := newShardedBatcher(BatchConfig{
 		FlushTimeout: 0,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      10,
-	}, request.NewItemsSizer(), nil, newWorkerPool(2), sink.Export, zap.NewNop(), 2)
+	}, itemsSizer{}, nil, newWorkerPool(2), sink.Export, zap.NewNop(), 2)
 	require.NoError(t, err)
 	require.NoError(t, sb.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
@@ -101,9 +102,9 @@ func TestShardedBatcherOneShardFlushesOnTimeout(t *testing.T) {
 	sink := requesttest.NewSink()
 	sb, err := newShardedBatcher(BatchConfig{
 		FlushTimeout: 50 * time.Millisecond,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      10,
-	}, request.NewItemsSizer(), nil, newWorkerPool(1), sink.Export, zap.NewNop(), 1)
+	}, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), 1)
 	require.NoError(t, err)
 	require.NoError(t, sb.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
@@ -123,9 +124,9 @@ func TestShardedBatcherOneShardDrainsOnShutdown(t *testing.T) {
 	sink := requesttest.NewSink()
 	sb, err := newShardedBatcher(BatchConfig{
 		FlushTimeout: 0,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      10,
-	}, request.NewItemsSizer(), nil, newWorkerPool(1), sink.Export, zap.NewNop(), 1)
+	}, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), 1)
 	require.NoError(t, err)
 	require.NoError(t, sb.Start(context.Background(), componenttest.NewNopHost()))
 
@@ -144,9 +145,9 @@ func TestShardedBatcherMultipleShardsDrainOnShutdown(t *testing.T) {
 	sink := requesttest.NewSink()
 	sb, err := newShardedBatcher(BatchConfig{
 		FlushTimeout: 0,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      10,
-	}, request.NewItemsSizer(), nil, newWorkerPool(2), sink.Export, zap.NewNop(), 2)
+	}, itemsSizer{}, nil, newWorkerPool(2), sink.Export, zap.NewNop(), 2)
 	require.NoError(t, err)
 	require.NoError(t, sb.Start(context.Background(), componenttest.NewNopHost()))
 

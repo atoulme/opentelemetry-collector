@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/collector/config/configstorage"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
-	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+	"go.opentelemetry.io/collector/exporter/exporterhelper/internal/sizer"
 )
 
 func TestConfig_Validate(t *testing.T) {
@@ -34,11 +34,11 @@ func TestConfig_Validate(t *testing.T) {
 	require.EqualError(t, confmap.Validate(cfg), "`min_size` must be less than or equal to `queue_size`")
 
 	cfg = newTestConfig()
-	cfg.Batch.Get().Sizer = request.SizerType{}
+	cfg.Batch.Get().Sizer = sizer.SizerType{}
 	require.EqualError(t, confmap.Validate(cfg), "batch: `batch` supports only `items` or `bytes` sizer, found \"\"")
 
 	cfg = newTestConfig()
-	cfg.Sizer = request.SizerTypeBytes
+	cfg.Sizer = sizer.SizerTypeBytes
 	require.NoError(t, confmap.Validate(cfg))
 }
 
@@ -115,11 +115,11 @@ func TestBatchConfig_Validate(t *testing.T) {
 	require.NoError(t, confmap.Validate(cfg))
 
 	cfg = newTestBatchConfig()
-	cfg.Sizer = request.SizerTypeRequests
+	cfg.Sizer = sizer.SizerTypeRequests
 	require.EqualError(t, confmap.Validate(cfg), "`batch` supports only `items` or `bytes` sizer, found \"requests\"")
 
 	cfg = newTestBatchConfig()
-	cfg.Sizer = request.SizerType{}
+	cfg.Sizer = sizer.SizerType{}
 	require.EqualError(t, confmap.Validate(cfg), "`batch` supports only `items` or `bytes` sizer, found \"\"")
 
 	cfg = newTestBatchConfig()
@@ -131,7 +131,7 @@ func TestBatchConfig_Validate(t *testing.T) {
 func newTestBatchConfig() BatchConfig {
 	return BatchConfig{
 		FlushTimeout: 200 * time.Millisecond,
-		Sizer:        request.SizerTypeItems,
+		Sizer:        sizer.SizerTypeItems,
 		MinSize:      2048,
 		MaxSize:      0,
 		Partition:    NewDefaultPartitionConfig(),
@@ -141,7 +141,7 @@ func newTestBatchConfig() BatchConfig {
 func TestUnmarshal(t *testing.T) {
 	newBaseCfg := func() configoptional.Optional[Config] {
 		return configoptional.Some(Config{
-			Sizer:        request.SizerTypeRequests,
+			Sizer:        sizer.SizerTypeRequests,
 			NumConsumers: 10,
 			QueueSize:    1_000,
 			Batch:        configoptional.Default(NewDefaultBatchConfig()),
@@ -156,7 +156,7 @@ func TestUnmarshal(t *testing.T) {
 			path: "batch_set_empty_explicit_sizer.yaml",
 			expectedCfg: func() configoptional.Optional[Config] {
 				cfg := newBaseCfg()
-				cfg.Get().Sizer = request.SizerTypeBytes
+				cfg.Get().Sizer = sizer.SizerTypeBytes
 				// Batch is set, sizer is not overridden
 				cfg.Get().Batch.GetOrInsertDefault()
 				return cfg
@@ -174,12 +174,12 @@ func TestUnmarshal(t *testing.T) {
 			path: "batch_set_nonempty_explicit_sizer.yaml",
 			expectedCfg: func() configoptional.Optional[Config] {
 				cfg := newBaseCfg()
-				cfg.Get().Sizer = request.SizerTypeBytes
+				cfg.Get().Sizer = sizer.SizerTypeBytes
 				cfg.Get().QueueSize = 2000
 				cfg.Get().Batch = configoptional.Some(BatchConfig{
 					FlushTimeout: 200 * time.Millisecond,
 					// Sizer has been overridden by parent sizer
-					Sizer:     request.SizerTypeBytes,
+					Sizer:     sizer.SizerTypeBytes,
 					MinSize:   100,
 					Partition: NewDefaultPartitionConfig(),
 				})
@@ -194,7 +194,7 @@ func TestUnmarshal(t *testing.T) {
 				cfg.Get().Batch = configoptional.Some(BatchConfig{
 					FlushTimeout: 200 * time.Millisecond,
 					// Sizer has NOT been overridden by parent sizer
-					Sizer:     request.SizerTypeItems,
+					Sizer:     sizer.SizerTypeItems,
 					MinSize:   100,
 					Partition: NewDefaultPartitionConfig(),
 				})

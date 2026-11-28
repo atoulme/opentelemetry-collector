@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package request // import "go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
+package sizer // import "go.opentelemetry.io/collector/exporter/exporterhelper/internal/request"
 
 // uncachedSize marks a dimension that has not been computed yet.
 const uncachedSize = -1

@@ -15,12 +15,12 @@ import (
 
 // MergeSplit splits and/or merges the provided logs request and the current request into one or more requests
 // conforming with the MaxSizeConfig.
-func (req *logsRequest) MergeSplit(_ context.Context, maxSize int, szt request.SizerType, r2 request.Request) ([]request.Request, error) {
+func (req *logsRequest) MergeSplit(_ context.Context, maxSize int, szt sizer.SizerType, r2 request.Request) ([]request.Request, error) {
 	var sz sizer.LogsSizer
 	switch szt {
-	case request.SizerTypeItems:
+	case sizer.SizerTypeItems:
 		sz = &sizer.LogsCountSizer{}
-	case request.SizerTypeBytes:
+	case sizer.SizerTypeBytes:
 		sz = &sizer.LogsBytesSizer{}
 	default:
 		return nil, errors.New("unknown sizer type")
@@ -41,7 +41,7 @@ func (req *logsRequest) MergeSplit(_ context.Context, maxSize int, szt request.S
 	return req.split(maxSize, sz, szt)
 }
 
-func (req *logsRequest) mergeTo(dst *logsRequest, sz sizer.LogsSizer, szt request.SizerType) {
+func (req *logsRequest) mergeTo(dst *logsRequest, sz sizer.LogsSizer, szt sizer.SizerType) {
 	if sz != nil {
 		dst.sizes.Update(szt, dst.size(sz, szt)+req.size(sz, szt))
 		req.sizes.Update(szt, 0)
@@ -49,7 +49,7 @@ func (req *logsRequest) mergeTo(dst *logsRequest, sz sizer.LogsSizer, szt reques
 	req.ld.ResourceLogs().MoveAndAppendTo(dst.ld.ResourceLogs())
 }
 
-func (req *logsRequest) split(maxSize int, sz sizer.LogsSizer, szt request.SizerType) ([]request.Request, error) {
+func (req *logsRequest) split(maxSize int, sz sizer.LogsSizer, szt sizer.SizerType) ([]request.Request, error) {
 	if req.size(sz, szt) <= maxSize {
 		return []request.Request{req}, nil
 	}
