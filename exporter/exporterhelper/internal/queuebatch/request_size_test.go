@@ -134,7 +134,7 @@ func TestRequestSizeCacheCrossDimension(t *testing.T) {
 			_ = batch.ItemsCount()
 			_ = batch.BytesSize()
 
-			res, err := batch.MergeSplit(context.Background(), 0, sizer.SizerTypeItems, sig.newReq(7))
+			res, err := batch.MergeSplit(context.Background(), 0, newSizer(sizer.SizerTypeItems).Sizer(), sig.newReq(7))
 			require.NoError(t, err)
 			merged := res[len(res)-1]
 
@@ -148,7 +148,7 @@ func TestRequestSizeCacheCrossDimension(t *testing.T) {
 			_ = batch.ItemsCount()
 			_ = batch.BytesSize()
 
-			res, err := batch.MergeSplit(context.Background(), 0, sizer.SizerTypeBytes, sig.newReq(7))
+			res, err := batch.MergeSplit(context.Background(), 0, newSizer(sizer.SizerTypeBytes).Sizer(), sig.newReq(7))
 			require.NoError(t, err)
 			merged := res[len(res)-1]
 
@@ -189,7 +189,7 @@ func TestRequestCachedSizeMatchesRecompute(t *testing.T) {
 
 				batch := sig.newReq(3)
 				for i := range 50 {
-					res, err := batch.MergeSplit(context.Background(), tc.maxSize, tc.szt, sig.newReq(11))
+					res, err := batch.MergeSplit(context.Background(), tc.maxSize, newSizer(tc.szt).Sizer(), sig.newReq(11))
 					require.NoError(t, err)
 					require.NotEmpty(t, res)
 					for _, r := range res {

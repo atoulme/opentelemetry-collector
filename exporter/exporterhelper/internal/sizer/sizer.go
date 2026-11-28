@@ -51,3 +51,11 @@ func (s *SizerType) MarshalText() ([]byte, error) {
 func (s *SizerType) String() string {
 	return s.val
 }
+
+type Sizer struct {
+	SizerType
+	LogsSizer
+	MetricsSizer
+	ProfilesSizer
+	TracesSizer
+}

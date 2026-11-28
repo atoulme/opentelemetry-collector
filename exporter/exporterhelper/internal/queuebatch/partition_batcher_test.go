@@ -252,25 +252,25 @@ func TestPartitionBatcher_Split_TimeoutDisabled(t *testing.T) {
 		{
 			name:       "items/one_worker",
 			sizerType:  sizer.SizerTypeItems,
-			sizer:      itemsSizer{},
+			sizer:      newSizer(sizer.SizerTypeItems),
 			maxWorkers: 1,
 		},
 		{
 			name:       "items/three_workers",
 			sizerType:  sizer.SizerTypeItems,
-			sizer:      itemsSizer{},
+			sizer:      newSizer(sizer.SizerTypeItems),
 			maxWorkers: 3,
 		},
 		{
 			name:       "bytes/one_worker",
 			sizerType:  sizer.SizerTypeBytes,
-			sizer:      bytesSizer{},
+			sizer:      newSizer(sizer.SizerTypeBytes),
 			maxWorkers: 1,
 		},
 		{
 			name:       "bytes/three_workers",
 			sizerType:  sizer.SizerTypeBytes,
-			sizer:      bytesSizer{},
+			sizer:      newSizer(sizer.SizerTypeBytes),
 			maxWorkers: 3,
 		},
 	}
@@ -361,7 +361,7 @@ func TestPartitionBatcher_MergeError(t *testing.T) {
 	}
 
 	sink := requesttest.NewSink()
-	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(2), sink.Export, zap.NewNop(), nil)
+	ba := newPartitionBatcher(cfg, newSizer(sizer.SizerTypeItems), nil, newWorkerPool(2), sink.Export, zap.NewNop(), nil)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
 		require.NoError(t, ba.Shutdown(context.Background()))
@@ -395,7 +395,7 @@ func TestPartitionBatcher_PartialSuccessError(t *testing.T) {
 	core, observed := observer.New(zap.WarnLevel)
 	logger := zap.New(core)
 	sink := requesttest.NewSink()
-	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, logger, nil)
+	ba := newPartitionBatcher(cfg, newSizer(sizer.SizerTypeItems), nil, newWorkerPool(1), sink.Export, logger, nil)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 
 	done := newFakeDone()
@@ -437,7 +437,7 @@ func TestSPartitionBatcher_PartialSuccessError_AfterOkRequest(t *testing.T) {
 	core, observed := observer.New(zap.WarnLevel)
 	logger := zap.New(core)
 	sink := requesttest.NewSink()
-	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, logger, nil)
+	ba := newPartitionBatcher(cfg, newSizer(sizer.SizerTypeItems), nil, newWorkerPool(1), sink.Export, logger, nil)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 
 	done := newFakeDone()
@@ -497,7 +497,7 @@ func TestShardBatcher_EmptyRequestList(t *testing.T) {
 	}
 
 	sink := requesttest.NewSink()
-	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), nil)
+	ba := newPartitionBatcher(cfg, newSizer(sizer.SizerTypeItems), nil, newWorkerPool(1), sink.Export, zap.NewNop(), nil)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
 		require.NoError(t, ba.Shutdown(context.Background()))
@@ -547,7 +547,7 @@ func TestPartitionBatcher_ContextMerging(t *testing.T) {
 				MinSize:      10,
 			}
 			sink := requesttest.NewSink()
-			ba := newPartitionBatcher(cfg, itemsSizer{}, tt.mergeCtxFunc, newWorkerPool(1), sink.Export, zap.NewNop(), nil)
+			ba := newPartitionBatcher(cfg, newSizer(sizer.SizerTypeItems), tt.mergeCtxFunc, newWorkerPool(1), sink.Export, zap.NewNop(), nil)
 			require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 
 			done := newFakeDone()
@@ -575,7 +575,7 @@ func TestPartitionBatcher_OnEmptyCallbackTriggered(t *testing.T) {
 		onEmptyCalled.Add(1)
 	}
 
-	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), onEmpty)
+	ba := newPartitionBatcher(cfg, newSizer(sizer.SizerTypeItems), nil, newWorkerPool(1), sink.Export, zap.NewNop(), onEmpty)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
 		require.NoError(t, ba.Shutdown(context.Background()))
@@ -612,7 +612,7 @@ func TestPartitionBatcher_OnEmptyNotCalledWithActiveData(t *testing.T) {
 		onEmptyCalled.Add(1)
 	}
 
-	ba := newPartitionBatcher(cfg, itemsSizer{}, nil, newWorkerPool(1), sink.Export, zap.NewNop(), onEmpty)
+	ba := newPartitionBatcher(cfg, newSizer(sizer.SizerTypeItems), nil, newWorkerPool(1), sink.Export, zap.NewNop(), onEmpty)
 	require.NoError(t, ba.Start(context.Background(), componenttest.NewNopHost()))
 	t.Cleanup(func() {
 		require.NoError(t, ba.Shutdown(context.Background()))

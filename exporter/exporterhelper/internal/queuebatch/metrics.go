@@ -87,8 +87,8 @@ func (req *metricsRequest) ItemsCount() int {
 	return req.sizes.SizeOf(sizer.SizerTypeItems, func() int { return req.md.DataPointCount() })
 }
 
-func (req *metricsRequest) size(sz sizer.MetricsSizer, szt sizer.SizerType) int {
-	return req.sizes.SizeOf(szt, func() int { return sz.MetricsSize(req.md) })
+func (req *metricsRequest) size(sz sizer.Sizer) int {
+	return req.sizes.SizeOf(sz.SizerType, func() int { return sz.MetricsSize(req.md) })
 }
 
 func (req *metricsRequest) BytesSize() int {

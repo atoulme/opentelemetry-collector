@@ -15,54 +15,42 @@ import (
 
 // MergeSplit splits and/or merges the provided traces request and the current request into one or more requests
 // conforming with the MaxSizeConfig.
-func (req *tracesRequest) MergeSplit(_ context.Context, maxSize int, szt sizer.SizerType, r2 request.Request) ([]request.Request, error) {
-	var sz sizer.TracesSizer
-	switch szt {
-	case sizer.SizerTypeItems:
-		sz = &sizer.TracesCountSizer{}
-	case sizer.SizerTypeBytes:
-		sz = &sizer.TracesBytesSizer{}
-	default:
-		return nil, errors.New("unknown sizer type")
-	}
-
+func (req *tracesRequest) MergeSplit(_ context.Context, maxSize int, sz sizer.Sizer, r2 request.Request) ([]request.Request, error) {
 	if r2 != nil {
 		req2, ok := r2.(*tracesRequest)
 		if !ok {
 			return nil, errors.New("invalid input type")
 		}
-		req2.mergeTo(req, sz, szt)
+		req2.mergeTo(req, sz)
 	}
 
 	// If no limit we can simply merge the new request into the current and return.
 	if maxSize == 0 {
 		return []request.Request{req}, nil
 	}
-	return req.split(maxSize, sz, szt)
+	return req.split(maxSize, sz)
 }
 
-func (req *tracesRequest) mergeTo(dst *tracesRequest, sz sizer.TracesSizer, szt sizer.SizerType) {
-	if sz != nil {
-		dst.sizes.Update(szt, dst.size(sz, szt)+req.size(sz, szt))
-		req.sizes.Update(szt, 0)
-	}
+func (req *tracesRequest) mergeTo(dst *tracesRequest, sz sizer.Sizer) {
+	dst.sizes.Update(sz.SizerType, dst.size(sz)+req.size(sz))
+	req.sizes.Update(sz.SizerType, 0)
 	req.td.ResourceSpans().MoveAndAppendTo(dst.td.ResourceSpans())
 }
 
-func (req *tracesRequest) split(maxSize int, sz sizer.TracesSizer, szt sizer.SizerType) ([]request.Request, error) {
-	if req.size(sz, szt) <= maxSize {
+func (req *tracesRequest) split(maxSize int, sz sizer.Sizer) ([]request.Request, error) {
+	if req.size(sz) <= maxSize {
 		return []request.Request{req}, nil
 	}
 	var res []request.Request
 	droppedItems := 0
-	for req.size(sz, szt) > maxSize {
+	for req.size(sz) > maxSize {
 		spansBefore := req.td.SpanCount()
-		td, removedSize := extractTraces(req.td, maxSize, sz)
+		td, removedSize := extractTraces(req.td, maxSize, sz.TracesSizer)
 		if removedSize == 0 {
 			// Nothing left the source, so no progress is possible. Stop rather than loop.
 			return res, fmt.Errorf("request size is greater than max size and cannot be split further, dropping items: %d", droppedItems+req.td.SpanCount())
 		}
-		req.sizes.Update(szt, req.size(sz, szt)-removedSize)
+		req.sizes.Update(sz.SizerType, req.size(sz)-removedSize)
 		droppedItems += spansBefore - req.td.SpanCount() - td.SpanCount()
 		if td.SpanCount() > 0 {
 			res = append(res, newTracesRequest(td))

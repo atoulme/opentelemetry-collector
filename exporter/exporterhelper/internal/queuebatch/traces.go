@@ -90,8 +90,8 @@ func (req *tracesRequest) ItemsCount() int {
 	return req.sizes.SizeOf(sizer.SizerTypeItems, func() int { return req.td.SpanCount() })
 }
 
-func (req *tracesRequest) size(sz sizer.TracesSizer, szt sizer.SizerType) int {
-	return req.sizes.SizeOf(szt, func() int { return sz.TracesSize(req.td) })
+func (req *tracesRequest) size(sz sizer.Sizer) int {
+	return req.sizes.SizeOf(sz.SizerType, func() int { return sz.TracesSize(req.td) })
 }
 
 func (req *tracesRequest) BytesSize() int {

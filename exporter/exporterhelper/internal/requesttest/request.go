@@ -48,7 +48,7 @@ func (r *FakeRequest) BytesSize() int {
 	return r.Bytes
 }
 
-func (r *FakeRequest) MergeSplit(_ context.Context, maxSize int, szt sizer.SizerType, r2 request.Request) ([]request.Request, error) {
+func (r *FakeRequest) MergeSplit(_ context.Context, maxSize int, sz sizer.Sizer, r2 request.Request) ([]request.Request, error) {
 	if r.MergeErr != nil {
 		return r.MergeErrResult, r.MergeErr
 	}
@@ -66,7 +66,7 @@ func (r *FakeRequest) MergeSplit(_ context.Context, maxSize int, szt sizer.Sizer
 	}
 
 	var res []request.Request
-	switch szt {
+	switch sz.SizerType {
 	case sizer.SizerTypeItems:
 		for r.Items != 0 {
 			if r.Items <= maxSize {

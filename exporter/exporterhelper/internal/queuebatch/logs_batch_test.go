@@ -22,7 +22,7 @@ import (
 func TestMergeLogs(t *testing.T) {
 	lr1 := newLogsRequest(testdata.GenerateLogs(2))
 	lr2 := newLogsRequest(testdata.GenerateLogs(3))
-	res, err := lr1.MergeSplit(context.Background(), 0, sizer.SizerTypeItems, lr2)
+	res, err := lr1.MergeSplit(context.Background(), 0, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
 	require.NoError(t, err)
 	require.Equal(t, 5, res[0].ItemsCount())
 }
@@ -120,7 +120,7 @@ func TestMergeSplitLogs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := tt.lr1.MergeSplit(context.Background(), tt.maxSize, tt.szt, tt.lr2)
+			res, err := tt.lr1.MergeSplit(context.Background(), tt.maxSize, newSizer(tt.szt).Sizer(), tt.lr2)
 			require.NoError(t, err)
 			assert.Len(t, res, len(tt.expected))
 			for i := range res {
@@ -258,7 +258,7 @@ func TestMergeSplitLogsBasedOnByteSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := tt.lr1.MergeSplit(context.Background(), tt.maxSize, tt.szt, tt.lr2)
+			res, err := tt.lr1.MergeSplit(context.Background(), tt.maxSize, newSizer(tt.szt).Sizer(), tt.lr2)
 			if tt.expectPartialError {
 				require.ErrorContains(t, err, "single log record exceeds the max size limit, dropping")
 			} else {
@@ -278,7 +278,7 @@ func TestMergeSplitLogsBasedOnByteSize(t *testing.T) {
 func TestMergeSplitLogsInputNotModifiedIfErrorReturned(t *testing.T) {
 	r1 := newLogsRequest(testdata.GenerateLogs(18))
 	r2 := newTracesRequest(testdata.GenerateTraces(3))
-	_, err := r1.MergeSplit(context.Background(), 10, sizer.SizerTypeItems, r2)
+	_, err := r1.MergeSplit(context.Background(), 10, newSizer(sizer.SizerTypeItems).Sizer(), r2)
 	require.Error(t, err)
 	assert.Equal(t, 18, r1.ItemsCount())
 }
@@ -297,7 +297,7 @@ func TestMergeSplitManySmallLogs(t *testing.T) {
 	merged := []request.Request{newLogsRequest(testdata.GenerateLogs(1))}
 	for range 1000 {
 		lr2 := newLogsRequest(testdata.GenerateLogs(10))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, sizer.SizerTypeItems, lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 	}
 	assert.Len(t, merged, 2)
@@ -307,7 +307,7 @@ func TestLogsMergeSplitExactBytes(t *testing.T) {
 	pb := plog.ProtoMarshaler{}
 	// Set max size off by 1, so forces every log to be it's own batch.
 	lr := newLogsRequest(testdata.GenerateLogs(4))
-	merged, err := lr.MergeSplit(context.Background(), pb.LogsSize(testdata.GenerateLogs(2))-1, sizer.SizerTypeBytes, nil)
+	merged, err := lr.MergeSplit(context.Background(), pb.LogsSize(testdata.GenerateLogs(2))-1, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.NoError(t, err)
 	assert.Len(t, merged, 4)
 }
@@ -315,16 +315,9 @@ func TestLogsMergeSplitExactBytes(t *testing.T) {
 func TestLogsMergeSplitExactItems(t *testing.T) {
 	// Set max size off by 1, so forces every log to be it's own batch.
 	lr := newLogsRequest(testdata.GenerateLogs(4))
-	merged, err := lr.MergeSplit(context.Background(), 1, sizer.SizerTypeItems, nil)
+	merged, err := lr.MergeSplit(context.Background(), 1, newSizer(sizer.SizerTypeItems).Sizer(), nil)
 	require.NoError(t, err)
 	assert.Len(t, merged, 4)
-}
-
-func TestLogsMergeSplitUnknownSizerType(t *testing.T) {
-	req := newLogsRequest(plog.NewLogs())
-	// Call MergeSplit with invalid sizer
-	_, err := req.MergeSplit(context.Background(), 0, sizer.SizerType{}, nil)
-	require.EqualError(t, err, "unknown sizer type")
 }
 
 func BenchmarkSplittingBasedOnItemCountManySmallLogs(b *testing.B) {
@@ -335,7 +328,7 @@ func BenchmarkSplittingBasedOnItemCountManySmallLogs(b *testing.B) {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(10))}
 		for range 1000 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10010, sizer.SizerTypeItems, lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10010, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 1)
@@ -350,7 +343,7 @@ func BenchmarkSplittingBasedOnByteSizeManySmallLogs(b *testing.B) {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(10))}
 		for range 1000 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(11000)), sizer.SizerTypeBytes, lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(11000)), newSizer(sizer.SizerTypeBytes).Sizer(), lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 1)
@@ -370,7 +363,7 @@ func BenchmarkByteSizeFlushCheckManySmallLogs(b *testing.B) {
 		var total int
 		for range 1000 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10))
-			res, _ := batch.MergeSplit(context.Background(), 0, sizer.SizerTypeBytes, lr2)
+			res, _ := batch.MergeSplit(context.Background(), 0, newSizer(sizer.SizerTypeBytes).Sizer(), lr2)
 			batch = res[len(res)-1]
 			// The batcher's MinSize check on the accumulated batch.
 			total += batch.BytesSize()
@@ -387,7 +380,7 @@ func BenchmarkSplittingBasedOnItemCountManyLogsSlightlyAboveLimit(b *testing.B) 
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(0))}
 		for range 10 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10001))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, sizer.SizerTypeItems, lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 11)
@@ -402,7 +395,7 @@ func BenchmarkSplittingBasedOnByteSizeManyLogsSlightlyAboveLimit(b *testing.B) {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(0))}
 		for range 10 {
 			lr2 := newLogsRequest(testdata.GenerateLogs(10001))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(10000)), sizer.SizerTypeBytes, lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(10000)), newSizer(sizer.SizerTypeBytes).Sizer(), lr2)
 			assert.Len(b, res, 2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
@@ -417,7 +410,7 @@ func BenchmarkSplittingBasedOnItemCountHugeLogs(b *testing.B) {
 	for b.Loop() {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(0))}
 		lr2 := newLogsRequest(testdata.GenerateLogs(100000))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, sizer.SizerTypeItems, lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 		assert.Len(b, merged, 10)
 	}
@@ -430,7 +423,7 @@ func BenchmarkSplittingBasedOnByteSizeHugeLogs(b *testing.B) {
 	for b.Loop() {
 		merged := []request.Request{newLogsRequest(testdata.GenerateLogs(0))}
 		lr2 := newLogsRequest(testdata.GenerateLogs(100000))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(10010)), sizer.SizerTypeBytes, lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), logsMarshaler.LogsSize(testdata.GenerateLogs(10010)), newSizer(sizer.SizerTypeBytes).Sizer(), lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 		assert.Len(b, merged, 10)
 	}
@@ -513,7 +506,7 @@ func TestMergeSplitLogsDropsOnlyOversizedRecord(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := newLogsRequest(newLogsWithBodies(tt.bodies...))
-			res, err := req.MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+			res, err := req.MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 
 			wantErr := fmt.Sprintf("single log record exceeds the max size limit, dropping items: %d", tt.wantDropped)
 			require.ErrorContains(t, err, wantErr)
@@ -534,7 +527,7 @@ func TestMergeSplitLogsAllRecordsOversized(t *testing.T) {
 	oversized := strings.Repeat("x", 1000)
 	req := newLogsRequest(newLogsWithBodies(oversized, oversized))
 
-	res, err := req.MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+	res, err := req.MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.ErrorContains(t, err, "single log record exceeds the max size limit, dropping items: 2")
 	assert.Empty(t, logBodies(res), "nothing can be exported when every record is oversized")
 }
@@ -547,7 +540,7 @@ func TestMergeSplitLogsItemlessOversizedRequest(t *testing.T) {
 	req := newLogsRequest(ld)
 	require.Greater(t, req.BytesSize(), 100, "precondition: request must start oversized")
 
-	res, err := req.MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+	res, err := req.MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.NoError(t, err, "nothing was lost, so nothing is due to be reported")
 	assert.Empty(t, res, "an oversized request holding no records must not be returned")
 }
@@ -563,7 +556,7 @@ func TestMergeSplitLogsDropsOnlyOversizedAcrossResourcesAndScopes(t *testing.T) 
 	ld.ResourceLogs().AppendEmpty().ScopeLogs().AppendEmpty().LogRecords().AppendEmpty().Body().SetStr("second_resource")
 	require.Equal(t, 3, ld.LogRecordCount(), "precondition: three records")
 
-	res, err := newLogsRequest(ld).MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+	res, err := newLogsRequest(ld).MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.ErrorContains(t, err, "single log record exceeds the max size limit, dropping items: 1")
 	assert.ElementsMatch(t, []string{"second_scope", "second_resource"}, logBodies(res),
 		"records in the other scope and resource must survive")
@@ -584,7 +577,7 @@ func TestMergeSplitLogsEmptyOversizedResourceDoesNotStopSplitting(t *testing.T) 
 	require.Equal(t, 12, req.ld.LogRecordCount(), "precondition: twelve records that each fit")
 	require.Greater(t, req.BytesSize(), 100, "precondition: request starts oversized")
 
-	res, err := req.MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+	res, err := req.MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.NoError(t, err, "no record is oversized, so nothing should be reported")
 
 	marshaler := &plog.ProtoMarshaler{}
@@ -628,7 +621,7 @@ func TestMergeSplitLogsRetriesAfterDiscardingRecordlessResources(t *testing.T) {
 	sl.LogRecords().AppendEmpty().Body().SetStr(first)
 	sl.LogRecords().AppendEmpty().Body().SetStr(second)
 
-	res, err := newLogsRequest(ld).MergeSplit(context.Background(), maxSize, sizer.SizerTypeBytes, nil)
+	res, err := newLogsRequest(ld).MergeSplit(context.Background(), maxSize, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.NoError(t, err, "no record is oversized, so none may be dropped")
 
 	marshaler := &plog.ProtoMarshaler{}
@@ -659,7 +652,7 @@ func TestMergeSplitLogsStopsWhenNoProgressIsPossible(t *testing.T) {
 	sl.LogRecords().AppendEmpty().Body().SetStr("first")
 	sl.LogRecords().AppendEmpty().Body().SetStr("second")
 
-	res, err := newLogsRequest(ld).MergeSplit(context.Background(), maxSize, sizer.SizerTypeBytes, nil)
+	res, err := newLogsRequest(ld).MergeSplit(context.Background(), maxSize, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.ErrorContains(t, err, "request size is greater than max size and cannot be split further, dropping items: 2")
 	assert.Empty(t, res, "records that cannot fit any batch must not be returned")
 }

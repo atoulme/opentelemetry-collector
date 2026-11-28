@@ -22,7 +22,7 @@ import (
 func TestMergeTraces(t *testing.T) {
 	tr1 := newTracesRequest(testdata.GenerateTraces(2))
 	tr2 := newTracesRequest(testdata.GenerateTraces(3))
-	res, err := tr1.MergeSplit(context.Background(), 0, sizer.SizerTypeItems, tr2)
+	res, err := tr1.MergeSplit(context.Background(), 0, newSizer(sizer.SizerTypeItems).Sizer(), tr2)
 	require.NoError(t, err)
 	assert.Equal(t, 5, res[0].ItemsCount())
 }
@@ -132,7 +132,7 @@ func TestMergeSplitTraces(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := tt.tr1.MergeSplit(context.Background(), tt.maxSize, tt.szt, tt.tr2)
+			res, err := tt.tr1.MergeSplit(context.Background(), tt.maxSize, newSizer(tt.szt).Sizer(), tt.tr2)
 			require.NoError(t, err)
 			assert.Len(t, res, len(tt.expected))
 			for i := range res {
@@ -271,7 +271,7 @@ func TestMergeSplitTracesBasedOnByteSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := tt.lr1.MergeSplit(context.Background(), tt.maxSize, tt.szt, tt.lr2)
+			res, err := tt.lr1.MergeSplit(context.Background(), tt.maxSize, newSizer(tt.szt).Sizer(), tt.lr2)
 			if tt.expectPartialError {
 				require.ErrorContains(t, err, "single span exceeds the max size limit, dropping items:")
 			} else {
@@ -291,7 +291,7 @@ func TestMergeSplitTracesBasedOnByteSize(t *testing.T) {
 func TestMergeSplitTracesInputNotModifiedIfErrorReturned(t *testing.T) {
 	r1 := newTracesRequest(testdata.GenerateTraces(18))
 	r2 := newLogsRequest(testdata.GenerateLogs(3))
-	_, err := r1.MergeSplit(context.Background(), 10, sizer.SizerTypeItems, r2)
+	_, err := r1.MergeSplit(context.Background(), 10, newSizer(sizer.SizerTypeItems).Sizer(), r2)
 	require.Error(t, err)
 	assert.Equal(t, 18, r1.ItemsCount())
 }
@@ -310,7 +310,7 @@ func TestMergeSplitManySmallTraces(t *testing.T) {
 	merged := []request.Request{newTracesRequest(testdata.GenerateTraces(1))}
 	for range 1000 {
 		lr2 := newTracesRequest(testdata.GenerateTraces(10))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, sizer.SizerTypeItems, lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 	}
 	assert.Len(t, merged, 2)
@@ -320,7 +320,7 @@ func TestTracesMergeSplitExactBytes(t *testing.T) {
 	pb := ptrace.ProtoMarshaler{}
 	// Set max size off by 1, so forces every log to be it's own batch.
 	lr := newTracesRequest(testdata.GenerateTraces(4))
-	merged, err := lr.MergeSplit(context.Background(), pb.TracesSize(testdata.GenerateTraces(2))-1, sizer.SizerTypeBytes, nil)
+	merged, err := lr.MergeSplit(context.Background(), pb.TracesSize(testdata.GenerateTraces(2))-1, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.NoError(t, err)
 	assert.Len(t, merged, 4)
 }
@@ -328,16 +328,9 @@ func TestTracesMergeSplitExactBytes(t *testing.T) {
 func TestTracesMergeSplitExactItems(t *testing.T) {
 	// Set max size off by 1, so forces every log to be it's own batch.
 	lr := newTracesRequest(testdata.GenerateTraces(4))
-	merged, err := lr.MergeSplit(context.Background(), 1, sizer.SizerTypeItems, nil)
+	merged, err := lr.MergeSplit(context.Background(), 1, newSizer(sizer.SizerTypeItems).Sizer(), nil)
 	require.NoError(t, err)
 	assert.Len(t, merged, 4)
-}
-
-func TestTracesMergeSplitUnknownSizerType(t *testing.T) {
-	req := newTracesRequest(ptrace.NewTraces())
-	// Call MergeSplit with invalid sizer
-	_, err := req.MergeSplit(context.Background(), 0, sizer.SizerType{}, nil)
-	require.EqualError(t, err, "unknown sizer type")
 }
 
 func BenchmarkSplittingBasedOnItemCountManySmallTraces(b *testing.B) {
@@ -348,7 +341,7 @@ func BenchmarkSplittingBasedOnItemCountManySmallTraces(b *testing.B) {
 		merged := []request.Request{newTracesRequest(testdata.GenerateTraces(10))}
 		for range 1000 {
 			lr2 := newTracesRequest(testdata.GenerateTraces(10))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10010, sizer.SizerTypeItems, lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10010, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 1)
@@ -363,7 +356,7 @@ func BenchmarkSplittingBasedOnItemCountManyTracesSlightlyAboveLimit(b *testing.B
 		merged := []request.Request{newTracesRequest(testdata.GenerateTraces(0))}
 		for range 10 {
 			lr2 := newTracesRequest(testdata.GenerateTraces(10001))
-			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, sizer.SizerTypeItems, lr2)
+			res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
 			merged = append(merged[0:len(merged)-1], res...)
 		}
 		assert.Len(b, merged, 11)
@@ -377,7 +370,7 @@ func BenchmarkSplittingBasedOnItemCountHugeTraces(b *testing.B) {
 	for b.Loop() {
 		merged := []request.Request{newTracesRequest(testdata.GenerateTraces(0))}
 		lr2 := newTracesRequest(testdata.GenerateTraces(100000))
-		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, sizer.SizerTypeItems, lr2)
+		res, _ := merged[len(merged)-1].MergeSplit(context.Background(), 10000, newSizer(sizer.SizerTypeItems).Sizer(), lr2)
 		merged = append(merged[0:len(merged)-1], res...)
 		assert.Len(b, merged, 10)
 	}
@@ -460,7 +453,7 @@ func TestMergeSplitTracesDropsOnlyOversizedSpan(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := newTracesRequest(newTracesWithSpanNames(tt.names...))
-			res, err := req.MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+			res, err := req.MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 
 			wantErr := fmt.Sprintf("single span exceeds the max size limit, dropping items: %d", tt.wantDropped)
 			require.ErrorContains(t, err, wantErr)
@@ -480,7 +473,7 @@ func TestMergeSplitTracesAllSpansOversized(t *testing.T) {
 	oversized := strings.Repeat("x", 1000)
 	req := newTracesRequest(newTracesWithSpanNames(oversized, oversized))
 
-	res, err := req.MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+	res, err := req.MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.ErrorContains(t, err, "single span exceeds the max size limit, dropping items: 2")
 	assert.Empty(t, spanNames(res), "nothing can be exported when every span is oversized")
 }
@@ -493,7 +486,7 @@ func TestMergeSplitTracesItemlessOversizedRequest(t *testing.T) {
 	req := newTracesRequest(td)
 	require.Greater(t, req.BytesSize(), 100, "precondition: request must start oversized")
 
-	res, err := req.MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+	res, err := req.MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.NoError(t, err, "nothing was lost, so nothing is due to be reported")
 	assert.Empty(t, res, "an oversized request holding no spans must not be returned")
 }
@@ -509,7 +502,7 @@ func TestMergeSplitTracesDropsOnlyOversizedAcrossResourcesAndScopes(t *testing.T
 	td.ResourceSpans().AppendEmpty().ScopeSpans().AppendEmpty().Spans().AppendEmpty().SetName("second_resource")
 	require.Equal(t, 3, td.SpanCount(), "precondition: three spans")
 
-	res, err := newTracesRequest(td).MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+	res, err := newTracesRequest(td).MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.ErrorContains(t, err, "single span exceeds the max size limit, dropping items: 1")
 	assert.ElementsMatch(t, []string{"second_scope", "second_resource"}, spanNames(res),
 		"spans in the other scope and resource must survive")
@@ -530,7 +523,7 @@ func TestMergeSplitTracesEmptyOversizedResourceDoesNotStopSplitting(t *testing.T
 	require.Equal(t, 12, req.td.SpanCount(), "precondition: twelve spans that each fit")
 	require.Greater(t, req.BytesSize(), 100, "precondition: request starts oversized")
 
-	res, err := req.MergeSplit(context.Background(), 100, sizer.SizerTypeBytes, nil)
+	res, err := req.MergeSplit(context.Background(), 100, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.NoError(t, err, "no span is oversized, so nothing should be reported")
 
 	survived := 0
@@ -573,7 +566,7 @@ func TestMergeSplitTracesRetriesAfterDiscardingSpanlessResources(t *testing.T) {
 	ss.Spans().AppendEmpty().SetName(first)
 	ss.Spans().AppendEmpty().SetName(second)
 
-	res, err := newTracesRequest(td).MergeSplit(context.Background(), maxSize, sizer.SizerTypeBytes, nil)
+	res, err := newTracesRequest(td).MergeSplit(context.Background(), maxSize, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.NoError(t, err, "no span is oversized, so none may be dropped")
 
 	survived := 0
@@ -602,7 +595,7 @@ func TestMergeSplitTracesStopsWhenNoProgressIsPossible(t *testing.T) {
 	ss.Spans().AppendEmpty().SetName("first")
 	ss.Spans().AppendEmpty().SetName("second")
 
-	res, err := newTracesRequest(td).MergeSplit(context.Background(), maxSize, sizer.SizerTypeBytes, nil)
+	res, err := newTracesRequest(td).MergeSplit(context.Background(), maxSize, newSizer(sizer.SizerTypeBytes).Sizer(), nil)
 	require.ErrorContains(t, err, "request size is greater than max size and cannot be split further, dropping items: 2")
 	assert.Empty(t, res, "spans that cannot fit any batch must not be returned")
 }

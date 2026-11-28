@@ -90,8 +90,8 @@ func (req *logsRequest) ItemsCount() int {
 	return req.sizes.SizeOf(sizer.SizerTypeItems, func() int { return req.ld.LogRecordCount() })
 }
 
-func (req *logsRequest) size(sz sizer.LogsSizer, szt sizer.SizerType) int {
-	return req.sizes.SizeOf(szt, func() int { return sz.LogsSize(req.ld) })
+func (req *logsRequest) size(sz sizer.Sizer) int {
+	return req.sizes.SizeOf(sz.SizerType, func() int { return sz.LogsSize(req.ld) })
 }
 
 func (req *logsRequest) BytesSize() int {
